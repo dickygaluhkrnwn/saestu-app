@@ -8,7 +8,8 @@ import { Child, Measurement } from "@/types/schema";
 import { getMeasurementsByChild } from "@/lib/services/measurements";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Ruler, Weight, Activity, Plus } from "lucide-react";
-import { calculateAgeInMonths } from "@/lib/who-standards"; // Helper sederhana
+import { calculateAgeInMonths } from "@/lib/who-standards";
+import GrowthChart from "@/components/charts/GrowthChart"; // IMPORT BARU
 
 export default function ChildDetailPage() {
   const params = useParams();
@@ -17,11 +18,13 @@ export default function ChildDetailPage() {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // State untuk Tab Grafik (Berat/Tinggi)
+  const [chartTab, setChartTab] = useState<"weight" | "length">("weight");
+
   useEffect(() => {
     const init = async () => {
       if (!params.id) return;
       try {
-        // Ambil Data Anak
         const childRef = doc(db, "children", params.id as string);
         const childSnap = await getDoc(childRef);
         
@@ -33,7 +36,6 @@ export default function ChildDetailPage() {
           } as Child;
           setChild(childData);
 
-          // Ambil Riwayat Pengukuran
           const history = await getMeasurementsByChild(childData.id);
           setMeasurements(history);
         }
@@ -74,6 +76,38 @@ export default function ChildDetailPage() {
           </div>
         </div>
 
+        {/* --- AREA GRAFIK (KMS DIGITAL) --- */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-600" />
+              Grafik Pertumbuhan
+            </h3>
+            {/* Toggle Switch Sederhana */}
+            <div className="flex bg-slate-100 rounded-lg p-1">
+              <button 
+                onClick={() => setChartTab("weight")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${chartTab === 'weight' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}
+              >
+                Berat
+              </button>
+              <button 
+                onClick={() => setChartTab("length")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${chartTab === 'length' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}
+              >
+                Tinggi
+              </button>
+            </div>
+          </div>
+
+          {/* Render Komponen Grafik */}
+          <GrowthChart 
+            measurements={measurements} 
+            gender={child.gender} 
+            type={chartTab} 
+          />
+        </div>
+
         {/* Tombol Aksi */}
         <Button 
           className="w-full h-12 text-lg shadow-blue-200 shadow-lg" 
@@ -85,10 +119,7 @@ export default function ChildDetailPage() {
 
         {/* Riwayat Pengukuran */}
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <Activity className="h-5 w-5 text-blue-600" />
-            Riwayat Pertumbuhan
-          </h3>
+          <h3 className="font-bold text-slate-800">Riwayat Detail</h3>
           
           {measurements.length === 0 ? (
             <div className="p-6 text-center bg-white rounded-xl border border-dashed border-slate-300 text-slate-400">
@@ -97,7 +128,6 @@ export default function ChildDetailPage() {
           ) : (
             measurements.map((m) => (
               <div key={m.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                {/* Status Indicator Strip */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                   m.weightStatus === 'adequate' ? 'bg-green-500' : 
                   m.weightStatus === 'inadequate' ? 'bg-red-500' : 'bg-yellow-400'
@@ -120,7 +150,6 @@ export default function ChildDetailPage() {
                     </div>
                   </div>
                   
-                  {/* Badge Status */}
                   <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
                     m.weightStatus === 'adequate' ? 'bg-green-100 text-green-700' : 
                     m.weightStatus === 'inadequate' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
