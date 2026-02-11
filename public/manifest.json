@@ -1,0 +1,22 @@
+{
+  "name": "SAESTU - Pantau Stunting",
+  "short_name": "SAESTU",
+  "description": "Sistem Deteksi Dini Stunting & Pemantauan Gizi Anak",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
