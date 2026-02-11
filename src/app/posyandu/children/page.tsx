@@ -1,26 +1,58 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // 1. Import Router
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, Search, Baby, Trash2, ChevronRight, Weight } from "lucide-react";
+import { 
+  Plus, 
+  Search, 
+  Baby, 
+  Trash2, 
+  ChevronRight, 
+  Filter,
+  Calendar,
+  User as UserIcon,
+  MapPin
+} from "lucide-react";
+
+// UI Components
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Toast, ToastType } from "@/components/ui/Toast"; // Toast Notification
+
 import { getChildrenByPosyandu, addChild, deleteChild, CreateChildInput } from "@/lib/services/children";
 import { getParentsByPosyandu } from "@/lib/services/parents";
 import { Child, UserProfile } from "@/types/schema";
 import { calculateAgeInMonths } from "@/lib/who-standards";
+import { cn } from "@/lib/utils";
 
 export default function ChildrenPage() {
-  const router = useRouter(); // 2. Inisialisasi Router
+  const router = useRouter();
   const { userProfile } = useAuth();
+  
+  // Data State
   const [children, setChildren] = useState<Child[]>([]);
   const [parents, setParents] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
+    message: "",
+    type: "success",
+    isVisible: false,
+  });
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type, isVisible: true });
+  };
 
   // Form State
   const [formData, setFormData] = useState<CreateChildInput>({
@@ -77,9 +109,9 @@ export default function ChildrenPage() {
       await fetchData();
       setIsModalOpen(false);
       resetForm();
-      alert("Data Anak berhasil ditambahkan!");
+      showToast("Data Anak berhasil ditambahkan!", "success");
     } catch (err) {
-      alert("Gagal menambah data anak.");
+      showToast("Gagal menambah data anak.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,142 +131,306 @@ export default function ChildrenPage() {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Data Balita</h1>
-          <p className="text-sm text-slate-500">Daftar anak di posyandu ini</p>
+    <div className="p-4 md:p-6 space-y-6 font-sans pb-24">
+      {/* --- MODERN HERO HEADER --- */}
+      <div className="relative rounded-3xl bg-gradient-to-r from-teal-600 to-teal-500 p-6 md:p-8 shadow-xl shadow-teal-900/5 overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+           <Baby className="w-48 h-48 text-white transform translate-x-10 -translate-y-10" />
         </div>
-        <Button size="sm" onClick={() => setIsModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Anak Baru
-        </Button>
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+           <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
+                 <MapPin className="w-3.5 h-3.5" />
+                 <span>Posyandu Mawar 01</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Data Balita</h1>
+              <p className="text-teal-50 text-sm md:text-base max-w-lg leading-relaxed opacity-90">
+                 Kelola data tumbuh kembang anak secara digital, akurat, dan terintegrasi untuk generasi sehat.
+              </p>
+           </div>
+
+           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              {/* Stat Badge */}
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex-1 md:flex-none">
+                 <div className="bg-white/20 p-2 rounded-xl text-white">
+                    <UserIcon className="w-5 h-5" />
+                 </div>
+                 <div>
+                    <p className="text-xs text-teal-100 font-medium">Total Anak</p>
+                    <p className="text-xl font-bold text-white">{children.length}</p>
+                 </div>
+              </div>
+
+              <Button 
+                 className="h-auto py-3 px-6 bg-white text-teal-700 hover:bg-teal-50 hover:scale-105 active:scale-95 border-0 shadow-lg font-bold transition-all"
+                 onClick={() => setIsModalOpen(true)}
+              >
+                 <Plus className="h-5 w-5 mr-2" />
+                 Anak Baru
+              </Button>
+           </div>
+        </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input 
-          placeholder="Cari nama anak atau NIK..." 
-          className="pl-10 bg-white"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* --- SEARCH BAR --- */}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md py-2 -mx-2 px-2">
+        <div className="relative shadow-sm rounded-2xl group focus-within:shadow-md transition-shadow">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-400">
+            <Search className="h-5 w-5 group-focus-within:text-primary transition-colors" />
+          </div>
+          <Input 
+            placeholder="Cari nama anak atau NIK..." 
+            className="pl-10 h-12 rounded-2xl border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 transition-all text-base shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {/* Filter Icon Visual */}
+          <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
+             <Filter className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
+      {/* --- LIST CONTENT --- */}
       <div className="space-y-3">
         {loading ? (
-          <p className="text-center text-slate-500 py-8">Memuat data...</p>
+          // SKELETON LOADER (Modern)
+          [1, 2, 3].map((i) => (
+            <Card key={i} className="flex gap-4 items-center animate-pulse border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100"></div>
+              <div className="flex-1 space-y-3">
+                <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                <div className="h-3 bg-slate-100 rounded w-1/4"></div>
+              </div>
+            </Card>
+          ))
         ) : filteredChildren.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-slate-100">
-            <Baby className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-slate-500">Belum ada data anak.</p>
+          // EMPTY STATE
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 text-center">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+               <Baby className="h-10 w-10 text-slate-300" />
+            </div>
+            <h3 className="text-slate-900 font-bold text-lg">Belum ada data</h3>
+            <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">
+              Data anak yang Anda tambahkan akan muncul di sini.
+            </p>
           </div>
         ) : (
-          filteredChildren.map((child) => (
-            <div 
-              key={child.id} 
-              // 3. Tambahkan fungsi onClick ini agar kartu bisa diklik
-              onClick={() => router.push(`/posyandu/children/${child.id}`)}
-              className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:bg-blue-50 transition-colors group"
-            >
-              <div className="flex gap-4 items-center">
-                <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${child.gender === 'L' ? 'bg-blue-400' : 'bg-pink-400'}`}>
-                  {child.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900 group-hover:text-blue-700">{child.name}</h3>
-                  <div className="text-xs text-slate-500 flex flex-col gap-0.5">
-                    <span>{calculateAgeInMonths(child.dob as Date)} Bulan</span>
-                    <span className="text-slate-400">{child.parentName}</span>
+          // DATA LIST
+          filteredChildren.map((child) => {
+            const age = calculateAgeInMonths(child.dob as Date);
+            return (
+              <Card 
+                key={child.id} 
+                hoverable
+                onClick={() => router.push(`/posyandu/children/${child.id}`)}
+                className="group relative cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Avatar Gender */}
+                  <div className={cn(
+                    "h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md transition-transform group-hover:scale-105",
+                    child.gender === 'L' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'
+                  )}>
+                    {child.name.charAt(0).toUpperCase()}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-800 text-lg truncate group-hover:text-primary transition-colors">
+                      {child.name}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
+                      <Badge variant="neutral" className="gap-1 font-medium bg-slate-50 border-slate-100">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        {age} Bulan
+                      </Badge>
+                      <span className="flex items-center gap-1 truncate">
+                        <UserIcon className="w-3 h-3 text-slate-400" />
+                        {child.parentName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Arrow */}
+                  <div className="text-slate-300 group-hover:text-primary transition-colors">
+                    <ChevronRight className="h-6 w-6" />
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* Tombol Hapus (Stop Propagation agar tidak memicu navigasi) */}
+                
+                {/* Delete Button (Absolute Position) */}
                 <button 
                   onClick={(e) => {
                     e.stopPropagation(); 
-                    if(confirm("Hapus data anak ini?")) {
+                    if(confirm(`Yakin ingin menghapus data ${child.name}?`)) {
                       deleteChild(child.id).then(fetchData);
+                      showToast("Data berhasil dihapus", "success");
                     }
                   }}
-                  className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full"
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                  title="Hapus Data"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-blue-500" />
-              </div>
-            </div>
-          ))
+              </Card>
+            );
+          })
         )}
       </div>
 
-      {/* Modal Tambah Anak (Form) */}
+      {/* --- MODAL TAMBAH ANAK --- */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title="Tambah Data Anak"
+        title="Registrasi Anak Baru"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-          {/* Identitas Dasar */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Nama Lengkap Anak</label>
-            <Input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Section: Identitas */}
+          <div className="space-y-4">
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nama Lengkap</label>
+                <Input 
+                  required 
+                  placeholder="Contoh: Budi Santoso"
+                  className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                />
+             </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">NIK (Opsional)</label>
+                   <Input 
+                      placeholder="16 Digit"
+                      className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                      value={formData.nik} 
+                      onChange={(e) => setFormData({...formData, nik: e.target.value})} 
+                   />
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Gender</label>
+                   <div className="relative">
+                      <select 
+                        className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                        value={formData.gender} 
+                        onChange={(e) => setFormData({...formData, gender: e.target.value as "L"|"P"})}
+                      >
+                        <option value="L">Laki-laki</option>
+                        <option value="P">Perempuan</option>
+                      </select>
+                      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                   </div>
+                </div>
+             </div>
           </div>
+
+          <div className="h-px bg-slate-100 my-2"></div>
+
+          {/* Section: Kelahiran */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">NIK (Opsional)</label>
-              <Input value={formData.nik} onChange={(e) => setFormData({...formData, nik: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Jenis Kelamin</label>
-              <select className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none" value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value as "L"|"P"})}>
-                <option value="L">Laki-laki</option>
-                <option value="P">Perempuan</option>
-              </select>
-            </div>
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Tempat Lahir</label>
+                <Input 
+                   className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                   value={formData.pob} 
+                   onChange={(e) => setFormData({...formData, pob: e.target.value})} 
+                />
+             </div>
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Tanggal Lahir</label>
+                <Input 
+                   type="date" 
+                   required 
+                   className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                   value={formData.dob} 
+                   onChange={(e) => setFormData({...formData, dob: e.target.value})} 
+                />
+             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tempat Lahir</label>
-              <Input value={formData.pob} onChange={(e) => setFormData({...formData, pob: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tanggal Lahir</label>
-              <Input type="date" required value={formData.dob} onChange={(e) => setFormData({...formData, dob: e.target.value})} />
-            </div>
+
+          <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 grid grid-cols-2 gap-4">
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Berat Lahir (kg)</label>
+                <Input 
+                   type="number" step="0.01" required 
+                   className="bg-white border-primary/20 text-center font-bold text-lg h-12"
+                   value={formData.initialWeight || ""} 
+                   onChange={(e) => setFormData({...formData, initialWeight: parseFloat(e.target.value)})} 
+                />
+             </div>
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Panjang (cm)</label>
+                <Input 
+                   type="number" step="0.1" required 
+                   className="bg-white border-primary/20 text-center font-bold text-lg h-12"
+                   value={formData.initialHeight || ""} 
+                   onChange={(e) => setFormData({...formData, initialHeight: parseFloat(e.target.value)})} 
+                />
+             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Pilih Orang Tua</label>
-            <select className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none" value={formData.parentId} onChange={(e) => setFormData({...formData, parentId: e.target.value})}>
-              <option value="">-- Manual --</option>
-              {parents.map(p => <option key={p.uid} value={p.uid}>{p.name} ({p.email})</option>)}
-            </select>
-          </div>
-          {!formData.parentId && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Orang Tua (Manual)</label>
-              <Input required={!formData.parentId} value={formData.parentName} onChange={(e) => setFormData({...formData, parentName: e.target.value})} />
-            </div>
-          )}
-           <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Berat Lahir (kg)</label>
-              <Input type="number" step="0.01" required value={formData.initialWeight || ""} onChange={(e) => setFormData({...formData, initialWeight: parseFloat(e.target.value)})} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Panjang (cm)</label>
-              <Input type="number" step="0.1" required value={formData.initialHeight || ""} onChange={(e) => setFormData({...formData, initialHeight: parseFloat(e.target.value)})} />
-            </div>
+
+          <div className="h-px bg-slate-100 my-2"></div>
+
+          {/* Section: Orang Tua */}
+          <div className="space-y-3">
+             <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data Orang Tua</label>
+                <div className="relative">
+                   <select 
+                      className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                      value={formData.parentId} 
+                      onChange={(e) => setFormData({...formData, parentId: e.target.value})}
+                   >
+                      <option value="">-- Input Manual (Belum Punya Akun) --</option>
+                      {parents.map(p => <option key={p.uid} value={p.uid}>{p.name} ({p.email})</option>)}
+                   </select>
+                   <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                </div>
+             </div>
+             
+             {!formData.parentId && (
+                <div className="space-y-1.5 animate-fade-in">
+                   <Input 
+                      required={!formData.parentId} 
+                      placeholder="Nama Ibu/Ayah (Manual)"
+                      className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                      value={formData.parentName} 
+                      onChange={(e) => setFormData({...formData, parentName: e.target.value})} 
+                   />
+                </div>
+             )}
           </div>
 
           <div className="pt-4 flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button type="submit" isLoading={isSubmitting}>Simpan Data</Button>
+            <Button 
+               type="button" 
+               variant="ghost" 
+               className="text-slate-500"
+               onClick={() => setIsModalOpen(false)}
+            >
+               Batal
+            </Button>
+            <Button 
+               type="submit" 
+               isLoading={isSubmitting}
+               className="bg-primary hover:bg-primary-hover px-6"
+            >
+               Simpan Data
+            </Button>
           </div>
         </form>
       </Modal>
+
+      {/* Toast Component */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        isVisible={toast.isVisible} 
+        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} 
+      />
     </div>
   );
 }

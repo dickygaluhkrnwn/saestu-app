@@ -9,15 +9,7 @@ import {
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-
-// Tipe data User Profile kita di Firestore
-type UserProfile = {
-  uid: string;
-  email: string;
-  role: "master" | "puskesmas" | "kader" | "parent";
-  name: string;
-  posyanduId?: string;
-};
+import { UserProfile } from "@/types/schema"; // Gunakan tipe dari schema sentral
 
 interface AuthContextType {
   user: User | null; // User bawaan Firebase Auth

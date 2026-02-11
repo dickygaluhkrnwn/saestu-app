@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google"; // Font Modern & Friendly
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext"; // Import ini
+import { AuthProvider } from "@/context/AuthContext";
 
-const inter = Inter({ subsets: ["latin"] });
+const fontSans = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "SAESTU - Deteksi Dini Stunting",
@@ -17,8 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${inter.className} antialiased`}>
-        {/* Bungkus children dengan Provider */}
+      <body className={`${fontSans.className} antialiased bg-background text-text-main`}>
         <AuthProvider>
           {children}
         </AuthProvider>
