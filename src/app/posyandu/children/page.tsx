@@ -7,7 +7,6 @@ import {
   Plus, 
   Search, 
   Baby, 
-  Trash2, 
   ChevronRight, 
   Filter,
   Calendar,
@@ -21,9 +20,10 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Toast, ToastType } from "@/components/ui/Toast"; // Toast Notification
+import { Toast, ToastType } from "@/components/ui/Toast";
 
-import { getChildrenByPosyandu, addChild, deleteChild, CreateChildInput } from "@/lib/services/children";
+// Hapus deleteChild dari import karena fiturnya dipindah ke halaman detail
+import { getChildrenByPosyandu, addChild, CreateChildInput } from "@/lib/services/children";
 import { getParentsByPosyandu } from "@/lib/services/parents";
 import { Child, UserProfile } from "@/types/schema";
 import { calculateAgeInMonths } from "@/lib/who-standards";
@@ -144,7 +144,7 @@ export default function ChildrenPage() {
            <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
                  <MapPin className="w-3.5 h-3.5" />
-                 <span>Posyandu Mawar 01</span>
+                 <span>Data Wilayah Terkini</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Data Balita</h1>
               <p className="text-teal-50 text-sm md:text-base max-w-lg leading-relaxed opacity-90">
@@ -254,26 +254,11 @@ export default function ChildrenPage() {
                     </div>
                   </div>
 
-                  {/* Action Arrow */}
+                  {/* Action Arrow (Delete button removed for cleaner UI & Safety) */}
                   <div className="text-slate-300 group-hover:text-primary transition-colors">
                     <ChevronRight className="h-6 w-6" />
                   </div>
                 </div>
-                
-                {/* Delete Button (Absolute Position) */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation(); 
-                    if(confirm(`Yakin ingin menghapus data ${child.name}?`)) {
-                      deleteChild(child.id).then(fetchData);
-                      showToast("Data berhasil dihapus", "success");
-                    }
-                  }}
-                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
-                  title="Hapus Data"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </Card>
             );
           })
@@ -424,7 +409,6 @@ export default function ChildrenPage() {
         </form>
       </Modal>
 
-      {/* Toast Component */}
       <Toast 
         message={toast.message} 
         type={toast.type} 

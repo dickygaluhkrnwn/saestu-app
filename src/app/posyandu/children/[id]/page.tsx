@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // Tambahkan deleteDoc
 import { db } from "@/lib/firebase";
 import { Child, Measurement } from "@/types/schema";
 import { getMeasurementsByChild } from "@/lib/services/measurements";
+import { deleteChild } from "@/lib/services/children"; 
 import { calculateAgeInMonths } from "@/lib/who-standards";
 import GrowthChart from "@/components/charts/GrowthChart";
 import { 
@@ -20,8 +21,9 @@ import {
   FileText,
   TrendingUp,
   AlertCircle,
-  ChevronRight,
-  User 
+  User,
+  Trash2,
+  Edit2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal"; 
+import { Input } from "@/components/ui/Input"; 
+import { Toast, ToastType } from "@/components/ui/Toast"; 
 
 export default function ChildDetailPage() {
   const params = useParams();
@@ -42,6 +47,29 @@ export default function ChildDetailPage() {
   // State UI
   const [activeTab, setActiveTab] = useState<"chart" | "history" | "details">("chart");
   const [chartType, setChartType] = useState<"weight" | "length">("weight");
+
+  // Edit Biodata State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: "", nik: "", pob: "", dob: "", parentName: "",
+  });
+
+  // Edit/Delete Measurement State
+  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
+  const [isSavingMeasurement, setIsSavingMeasurement] = useState(false);
+  const [measurementFormData, setMeasurementFormData] = useState({
+    id: "", date: "", weight: "", height: "", notes: ""
+  });
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
+    message: "", type: "success", isVisible: false,
+  });
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type, isVisible: true });
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -70,7 +98,125 @@ export default function ChildDetailPage() {
     init();
   }, [params.id]);
 
-  // Helper untuk mapping status ke variant Badge
+  // --- HANDLER HAPUS DATA ANAK (BIODATA) ---
+  const handleDeleteChild = async () => {
+    if (!child) return;
+    if (confirm(`PERINGATAN: Anda yakin ingin menghapus seluruh data rekam medis ${child.name}? Tindakan ini tidak bisa dibatalkan.`)) {
+      try {
+        await deleteChild(child.id);
+        router.replace("/posyandu/children");
+      } catch (err) {
+        console.error(err);
+        showToast("Terjadi kesalahan saat menghapus data anak.", "error");
+      }
+    }
+  };
+
+  // --- HANDLER EDIT BIODATA ---
+  const handleOpenEdit = () => {
+    if (!child) return;
+    const dobDate = child.dob instanceof Date ? child.dob : new Date();
+    const offset = dobDate.getTimezoneOffset();
+    const localDate = new Date(dobDate.getTime() - (offset*60*1000));
+    const dobString = localDate.toISOString().split('T')[0];
+
+    setEditFormData({
+      name: child.name, nik: child.nik || "", pob: child.pob || "",
+      dob: dobString, parentName: child.parentName || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!child) return;
+    setIsEditing(true);
+
+    try {
+      const childRef = doc(db, "children", child.id);
+      const updatedDob = new Date(editFormData.dob);
+      const updatePayload = {
+        name: editFormData.name, nik: editFormData.nik, pob: editFormData.pob,
+        dob: updatedDob, parentName: editFormData.parentName
+      };
+
+      await updateDoc(childRef, updatePayload);
+      setChild({ ...child, ...updatePayload });
+      setIsEditModalOpen(false);
+      showToast("Biodata berhasil diperbarui!", "success");
+    } catch (error) {
+      showToast("Gagal memperbarui biodata.", "error");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  // --- HANDLER HAPUS MEASUREMENT ---
+  const handleDeleteMeasurement = async (id: string) => {
+    if (confirm("Apakah Anda yakin ingin menghapus riwayat pengukuran ini?")) {
+      try {
+        await deleteDoc(doc(db, "measurements", id));
+        setMeasurements(measurements.filter(m => m.id !== id));
+        showToast("Riwayat pengukuran berhasil dihapus.", "success");
+      } catch (error) {
+        showToast("Gagal menghapus riwayat pengukuran.", "error");
+      }
+    }
+  };
+
+  // --- HANDLER EDIT MEASUREMENT ---
+  const handleOpenEditMeasurement = (m: Measurement) => {
+    let dateString = "";
+    if (m.date instanceof Date) {
+      const offset = m.date.getTimezoneOffset();
+      const localDate = new Date(m.date.getTime() - (offset*60*1000));
+      dateString = localDate.toISOString().split('T')[0];
+    }
+    
+    setMeasurementFormData({
+      id: m.id,
+      date: dateString,
+      weight: m.weight.toString(),
+      height: m.height.toString(),
+      notes: m.notes || ""
+    });
+    setIsMeasurementModalOpen(true);
+  };
+
+  const handleMeasurementEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingMeasurement(true);
+    try {
+      const mRef = doc(db, "measurements", measurementFormData.id);
+      const updatedDate = new Date(measurementFormData.date);
+      const updatedWeight = parseFloat(measurementFormData.weight);
+      const updatedHeight = parseFloat(measurementFormData.height);
+
+      await updateDoc(mRef, {
+        date: updatedDate,
+        weight: updatedWeight,
+        height: updatedHeight,
+        notes: measurementFormData.notes
+      });
+
+      // Update Local State
+      setMeasurements(measurements.map(m => {
+        if (m.id === measurementFormData.id) {
+          return { ...m, date: updatedDate, weight: updatedWeight, height: updatedHeight, notes: measurementFormData.notes };
+        }
+        return m;
+      }));
+
+      setIsMeasurementModalOpen(false);
+      showToast("Riwayat pengukuran berhasil dikoreksi!", "success");
+    } catch (error) {
+      showToast("Gagal mengoreksi riwayat pengukuran.", "error");
+    } finally {
+      setIsSavingMeasurement(false);
+    }
+  };
+
+  // Helper status
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'adequate': return 'success';
@@ -131,7 +277,6 @@ export default function ChildDetailPage() {
           </div>
           
           <div className="flex items-start gap-5 relative z-10">
-            {/* Avatar Inisial */}
             <div className={cn(
               "w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-lg",
               child.gender === 'L' ? 'bg-gradient-to-br from-blue-500 to-blue-600' : 'bg-gradient-to-br from-pink-500 to-pink-600'
@@ -189,7 +334,6 @@ export default function ChildDetailPage() {
         {/* === TAB 1: GRAFIK === */}
         {activeTab === "chart" && (
           <div className="space-y-6 animate-fade-in">
-            {/* Status Terakhir Card */}
             {lastMeasurement ? (
                <Card className="bg-gradient-to-r from-teal-50 to-white border-teal-100">
                   <div className="flex items-start justify-between">
@@ -233,14 +377,12 @@ export default function ChildDetailPage() {
               </div>
             )}
 
-            {/* Area Chart */}
             <Card>
               <div className="flex items-center justify-between mb-6">
                  <div>
                     <h3 className="font-bold text-slate-800">Kurva Pertumbuhan</h3>
                     <p className="text-xs text-slate-400">Standar WHO 2006</p>
                  </div>
-                 {/* Switch Berat/Tinggi */}
                  <div className="flex bg-slate-100 p-1 rounded-lg">
                     <button
                       onClick={() => setChartType('weight')}
@@ -270,7 +412,6 @@ export default function ChildDetailPage() {
               />
             </Card>
 
-            {/* Action Button */}
             <Button
               onClick={() => router.push(`/posyandu/children/${child.id}/measure`)} 
               className="w-full h-14 text-base shadow-lg shadow-teal-200/50"
@@ -297,7 +438,6 @@ export default function ChildDetailPage() {
              ) : (
                measurements.map((m) => (
                   <Card key={m.id} hoverable className="relative overflow-hidden group">
-                    {/* Status Indicator Bar */}
                     <div className={cn(
                       "absolute left-0 top-0 bottom-0 w-1.5 transition-colors",
                       m.weightStatus === 'adequate' ? 'bg-emerald-500' : 
@@ -312,9 +452,27 @@ export default function ChildDetailPage() {
                             </p>
                             <p className="text-xs text-slate-400 mt-0.5">Usia: {m.ageInMonths} Bulan</p>
                           </div>
-                          <Badge variant={getStatusVariant(m.weightStatus)}>
-                             {getStatusLabel(m.weightStatus)}
-                          </Badge>
+                          
+                          {/* --- ACTION BUTTONS (EDIT & DELETE) --- */}
+                          <div className="flex items-center gap-1">
+                             <Badge variant={getStatusVariant(m.weightStatus)} className="mr-2 hidden sm:inline-flex">
+                               {getStatusLabel(m.weightStatus)}
+                             </Badge>
+                             <button 
+                                onClick={() => handleOpenEditMeasurement(m)}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                title="Koreksi Data"
+                             >
+                                <Edit2 className="w-4 h-4" />
+                             </button>
+                             <button 
+                                onClick={() => handleDeleteMeasurement(m.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                                title="Hapus Data"
+                             >
+                                <Trash2 className="w-4 h-4" />
+                             </button>
+                          </div>
                        </div>
 
                        <div className="flex items-center gap-6">
@@ -349,10 +507,22 @@ export default function ChildDetailPage() {
           </div>
         )}
 
-        {/* === TAB 3: DETAIL BIODATA === */}
+        {/* === TAB 3: DETAIL BIODATA & ZONA BAHAYA === */}
         {activeTab === "details" && (
-           <Card className="space-y-4 animate-fade-in">
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3">Informasi Balita</h3>
+           <Card className="space-y-4 animate-fade-in pb-2">
+              
+              {/* Header Info Balita + Tombol Edit */}
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-800">Informasi Balita</h3>
+                <Button 
+                   variant="outline" 
+                   size="sm" 
+                   onClick={handleOpenEdit} 
+                   className="h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200"
+                >
+                   <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit Biodata
+                </Button>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="p-3 bg-slate-50 rounded-xl">
@@ -381,12 +551,158 @@ export default function ChildDetailPage() {
                     <p className="text-xs text-slate-400 mb-1">Nama Ibu/Ayah</p>
                     <p className="font-medium text-slate-800">{child.parentName}</p>
                  </div>
-                 {/* Placeholder untuk NIK Ortu / Kontak jika nanti ada di schema */}
+              </div>
+
+              {/* ACTION: DELETE (Danger Zone) */}
+              <div className="mt-8 pt-6 border-t border-rose-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-rose-50/50 p-4 rounded-xl">
+                 <div>
+                    <p className="text-sm font-bold text-rose-800">Zona Berbahaya</p>
+                    <p className="text-xs text-rose-600/80">Menghapus data akan menghilangkan seluruh riwayat rekam medis anak secara permanen.</p>
+                 </div>
+                 <Button 
+                    variant="danger" 
+                    onClick={handleDeleteChild} 
+                    className="w-full md:w-auto whitespace-nowrap bg-rose-600 hover:bg-rose-700 text-white border-0"
+                 >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Hapus Data Anak
+                 </Button>
               </div>
            </Card>
         )}
 
       </div>
+
+      {/* --- MODAL EDIT BIODATA --- */}
+      <Modal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Biodata Anak"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+           <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Nama Lengkap</label>
+              <Input 
+                required 
+                value={editFormData.name} 
+                onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} 
+              />
+           </div>
+
+           <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 uppercase">NIK</label>
+                 <Input 
+                    value={editFormData.nik} 
+                    onChange={(e) => setEditFormData({...editFormData, nik: e.target.value})} 
+                 />
+              </div>
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 uppercase">Tanggal Lahir</label>
+                 <Input 
+                    type="date" 
+                    required 
+                    value={editFormData.dob} 
+                    onChange={(e) => setEditFormData({...editFormData, dob: e.target.value})} 
+                 />
+              </div>
+           </div>
+
+           <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Tempat Lahir</label>
+              <Input 
+                 value={editFormData.pob} 
+                 onChange={(e) => setEditFormData({...editFormData, pob: e.target.value})} 
+              />
+           </div>
+
+           <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Nama Orang Tua</label>
+              <Input 
+                 required 
+                 value={editFormData.parentName} 
+                 onChange={(e) => setEditFormData({...editFormData, parentName: e.target.value})} 
+              />
+           </div>
+
+           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+             <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Batal</Button>
+             <Button type="submit" isLoading={isEditing} className="bg-primary hover:bg-primary-hover">
+                Simpan Perubahan
+             </Button>
+           </div>
+        </form>
+      </Modal>
+
+      {/* --- MODAL EDIT MEASUREMENT --- */}
+      <Modal 
+        isOpen={isMeasurementModalOpen} 
+        onClose={() => setIsMeasurementModalOpen(false)}
+        title="Koreksi Data Pengukuran"
+      >
+        <form onSubmit={handleMeasurementEditSubmit} className="space-y-4">
+           
+           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-700 leading-relaxed">
+                 Mengoreksi berat atau tinggi di sini hanya akan mengubah angka. Status kurva gizi (Naik Bagus/Kurang) tidak akan dihitung ulang secara otomatis.
+              </p>
+           </div>
+
+           <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Tanggal Kunjungan</label>
+              <Input 
+                type="date"
+                required 
+                value={measurementFormData.date} 
+                onChange={(e) => setMeasurementFormData({...measurementFormData, date: e.target.value})} 
+              />
+           </div>
+
+           <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 uppercase">Berat (kg)</label>
+                 <Input 
+                    type="number" step="0.01"
+                    required
+                    value={measurementFormData.weight} 
+                    onChange={(e) => setMeasurementFormData({...measurementFormData, weight: e.target.value})} 
+                 />
+              </div>
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 uppercase">Tinggi (cm)</label>
+                 <Input 
+                    type="number" step="0.1"
+                    required 
+                    value={measurementFormData.height} 
+                    onChange={(e) => setMeasurementFormData({...measurementFormData, height: e.target.value})} 
+                 />
+              </div>
+           </div>
+
+           <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Catatan Tambahan (Opsional)</label>
+              <Input 
+                 value={measurementFormData.notes} 
+                 onChange={(e) => setMeasurementFormData({...measurementFormData, notes: e.target.value})} 
+              />
+           </div>
+
+           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+             <Button type="button" variant="ghost" onClick={() => setIsMeasurementModalOpen(false)}>Batal</Button>
+             <Button type="submit" isLoading={isSavingMeasurement} className="bg-blue-600 hover:bg-blue-700">
+                Simpan Koreksi
+             </Button>
+           </div>
+        </form>
+      </Modal>
+
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        isVisible={toast.isVisible} 
+        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} 
+      />
     </div>
   );
 }

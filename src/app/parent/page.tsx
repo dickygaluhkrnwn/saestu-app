@@ -46,7 +46,6 @@ export default function ParentDashboard() {
       if (!userProfile?.uid) return;
       try {
         // Ambil data anak yang terkait dengan Parent ID
-        // (Dalam skenario nyata, parentId harus di-set saat kader mendaftarkan anak)
         const childQ = query(collection(db, "children"), limit(1)); // Dummy limit 1 untuk demo
         const childSnap = await getDocs(childQ);
         
@@ -275,7 +274,8 @@ export default function ParentDashboard() {
                            <div className="absolute top-0 right-0 p-4 opacity-10"><Utensils className="w-32 h-32" /></div>
                            <div className="relative z-10">
                               <span className="px-2 py-1 bg-white/10 text-emerald-300 text-[10px] font-bold uppercase tracking-widest rounded-md">Ide Menu Spesial</span>
-                              <h4 className="font-black text-2xl mt-3 mb-4">{aiResult.recipeSuggestion.menuName}</h4>
+                              {/* FIX: Menambahkan text-white di sini agar terbaca jelas */}
+                              <h4 className="text-white font-black text-2xl mt-3 mb-4">{aiResult.recipeSuggestion.menuName}</h4>
                               
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-white/10 pb-1">Bahan-bahan</p>
                               <ul className="list-disc list-inside text-sm text-slate-200 mb-4 space-y-1">
