@@ -98,7 +98,7 @@ export default function ChildMedicalHistory({
       </div>
 
       {/* --- CONTENT AREA --- */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[500px]">
         {activeTab === 'chart' && (
           <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
             {/* 1. Last Status Overview */}
@@ -147,8 +147,8 @@ export default function ChildMedicalHistory({
             )}
 
             {/* 2. Main Chart Card */}
-            <Card className="p-0 border-slate-200 shadow-sm rounded-[2rem] overflow-hidden bg-white">
-              <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <Card className="p-0 border-slate-200 shadow-sm rounded-[2rem] overflow-visible bg-white">
+              <div className="p-6 pb-2 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                  <div>
                     <h3 className="font-black text-slate-800 tracking-tight">Tren Pertumbuhan</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Persentil WHO Standard</p>
@@ -158,7 +158,7 @@ export default function ChildMedicalHistory({
                       onClick={() => setChartType('weight')}
                       className={cn(
                         "px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase",
-                        chartType === 'weight' ? "bg-white shadow-sm text-blue-600" : "text-slate-500"
+                        chartType === 'weight' ? "bg-white shadow-sm text-blue-600" : "text-slate-50"
                       )}
                     >
                       Berat
@@ -167,7 +167,7 @@ export default function ChildMedicalHistory({
                       onClick={() => setChartType('length')}
                       className={cn(
                         "px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase",
-                        chartType === 'length' ? "bg-white shadow-sm text-pink-600" : "text-slate-500"
+                        chartType === 'length' ? "bg-white shadow-sm text-pink-600" : "text-slate-50"
                       )}
                     >
                       Tinggi
@@ -175,7 +175,12 @@ export default function ChildMedicalHistory({
                  </div>
               </div>
               
-              <div className="p-2 sm:p-4 bg-white h-[350px] w-full relative">
+              {/* PERBAIKAN TATA LETAK:
+                1. pb-14: Memberi ruang sangat luas di bawah untuk label bulan.
+                2. mt-[-10px]: Menarik chart sedikit ke atas agar lebih rapat ke header card.
+                3. h-[450px]: Memberi ruang vertikal yang cukup agar tidak tertekan.
+              */}
+              <div className="px-2 sm:px-6 pt-2 pb-14 bg-white h-[450px] w-full relative overflow-visible mt-[-10px]">
                 <GrowthChart 
                   measurements={measurements} 
                   gender={child.gender} 
@@ -197,7 +202,7 @@ export default function ChildMedicalHistory({
         )}
 
         {activeTab === 'history' && (
-          <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500 pb-20">
              {measurements.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
                    <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
@@ -235,13 +240,13 @@ export default function ChildMedicalHistory({
                                 <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                   <button 
                                     onClick={() => onEditMeasurement?.(m)}
-                                    className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button 
                                     onClick={() => onDeleteMeasurement?.(m.id)}
-                                    className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
