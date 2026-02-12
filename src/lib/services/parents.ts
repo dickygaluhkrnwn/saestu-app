@@ -1,42 +1,54 @@
 import { 
   collection, 
-  query, 
-  where, 
+  doc, 
+  setDoc, 
   getDocs, 
-  orderBy 
+  query, 
+  where,
+  orderBy, 
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserProfile } from "@/types/schema";
-import { createUser, CreateUserInput } from "@/lib/services/users";
+import { createAccountForOthers } from "@/lib/auth-helper";
 
 const COLLECTION_NAME = "users";
 
-// Ambil daftar Orang Tua khusus di Posyandu tertentu
+export const createParentAccount = async (posyanduId: string, data: { name: string, email: string, password: string }) => {
+  try {
+    // 1. Buat Auth
+    const uid = await createAccountForOthers(data.email, data.password);
+
+    // 2. Simpan Profil (Role: parent, terikat PosyanduId)
+    const userData: UserProfile = {
+      uid: uid,
+      email: data.email,
+      name: data.name,
+      role: "parent",
+      posyanduId: posyanduId,
+      createdAt: serverTimestamp() as any,
+    };
+
+    await setDoc(doc(db, COLLECTION_NAME, uid), userData);
+    return uid;
+  } catch (error) {
+    console.error("Error creating parent:", error);
+    throw error;
+  }
+};
+
 export const getParentsByPosyandu = async (posyanduId: string): Promise<UserProfile[]> => {
   try {
-    // Query: Cari user yang role-nya 'parent' DAN posyanduId-nya cocok
     const q = query(
       collection(db, COLLECTION_NAME), 
+      where("posyanduId", "==", posyanduId),
       where("role", "==", "parent"),
-      where("posyanduId", "==", posyanduId)
+      orderBy("createdAt", "desc")
     );
-    
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map((doc) => doc.data() as UserProfile);
   } catch (error) {
     console.error("Error fetching parents:", error);
     throw error;
   }
-};
-
-// Wrapper untuk membuat akun Parent (memastikan role otomatis 'parent')
-export const createParentAccount = async (
-  kaderPosyanduId: string, 
-  data: Pick<CreateUserInput, "email" | "password" | "name">
-) => {
-  return createUser({
-    ...data,
-    role: "parent",
-    posyanduId: kaderPosyanduId // Otomatis ikut Posyandu si Kader
-  });
 };

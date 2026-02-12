@@ -24,19 +24,19 @@ import { Select } from "@/components/ui/Select";
 import { Toast, ToastType } from "@/components/ui/Toast";
 
 import { getUsers, createUser, deleteUserFirestore, CreateUserInput } from "@/lib/services/users";
-import { getPosyandus } from "@/lib/services/posyandu";
-import { UserProfile, Posyandu } from "@/types/schema";
+// GANTI: Kita ambil data PuskesmasEntities, bukan Posyandu
+import { getPuskesmasEntities } from "@/lib/services/puskesmas";
+import { UserProfile, Puskesmas } from "@/types/schema";
 import { cn } from "@/lib/utils";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [posyandus, setPosyandus] = useState<Posyandu[]>([]);
+  const [puskesmasEntities, setPuskesmasEntities] = useState<Puskesmas[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
     message: "",
     type: "success",
@@ -52,18 +52,18 @@ export default function UsersPage() {
     email: "",
     password: "",
     name: "",
-    role: "kader",
-    posyanduId: "",
+    role: "puskesmas", // Default role
+    puskesmasId: "", // Field baru wajib untuk petugas puskesmas
   });
 
   const fetchData = async () => {
     try {
-      const [usersData, posyandusData] = await Promise.all([
+      const [usersData, puskData] = await Promise.all([
         getUsers(),
-        getPosyandus()
+        getPuskesmasEntities()
       ]);
       setUsers(usersData);
-      setPosyandus(posyandusData);
+      setPuskesmasEntities(puskData);
     } catch (err) {
       showToast("Gagal mengambil data sistem.", "error");
     } finally {
@@ -78,8 +78,9 @@ export default function UsersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.role === "kader" && !formData.posyanduId) {
-      showToast("Kader wajib ditugaskan di satu Posyandu!", "error");
+    // Validasi Wajib
+    if (formData.role === "puskesmas" && !formData.puskesmasId) {
+      showToast("Petugas wajib ditugaskan di satu Puskesmas!", "error");
       return;
     }
 
@@ -89,7 +90,7 @@ export default function UsersPage() {
       await fetchData();
       setIsModalOpen(false);
       setFormData({ 
-        email: "", password: "", name: "", role: "kader", posyanduId: "" 
+        email: "", password: "", name: "", role: "puskesmas", puskesmasId: "" 
       });
       showToast("Pengguna berhasil didaftarkan! ✅", "success");
     } catch (err: any) {
@@ -105,7 +106,7 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (uid: string, name: string) => {
-    if (confirm(`Hapus akses untuk ${name}? (Akun login tetap ada, tapi akses data di SAESTU akan dicabut)`)) {
+    if (confirm(`Hapus akses untuk ${name}?`)) {
       try {
         await deleteUserFirestore(uid);
         await fetchData();
@@ -116,9 +117,9 @@ export default function UsersPage() {
     }
   };
 
-  const getPosyanduName = (id?: string) => {
+  const getPuskesmasName = (id?: string) => {
     if (!id) return "-";
-    return posyandus.find(p => p.id === id)?.name || "Unknown";
+    return puskesmasEntities.find(p => p.id === id)?.name || "Unknown";
   };
 
   const filteredUsers = users.filter(u => 
@@ -130,7 +131,6 @@ export default function UsersPage() {
     <div className="space-y-8 p-6 font-sans">
       
       {/* --- HERO HEADER --- */}
-      {/* Menggunakan !text-white untuk memastikan teks judul TIDAK menjadi hitam */}
       <div className="relative rounded-3xl bg-gradient-to-r from-indigo-600 to-blue-700 p-8 shadow-xl shadow-indigo-900/10 text-white overflow-hidden border-b-4 border-indigo-500/30">
          <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
             <UserCog className="w-48 h-48 text-white transform translate-x-10 -translate-y-10" />
@@ -143,10 +143,10 @@ export default function UsersPage() {
                   <span>Access Management</span>
                </div>
                <h1 className="text-3xl md:text-4xl font-bold tracking-tight !text-white mb-2">
-                  Manajemen Pengguna
+                  Manajemen Petugas
                </h1>
                <p className="text-indigo-50 max-w-lg opacity-90 leading-relaxed">
-                  Kelola hak akses untuk Petugas Puskesmas dan Kader lapangan dalam satu pintu.
+                  Kelola akun Kepala/Petugas Puskesmas. (Akun Kader & Orang Tua dikelola oleh Puskesmas masing-masing).
                </p>
             </div>
             
@@ -155,7 +155,7 @@ export default function UsersPage() {
                className="bg-white text-indigo-700 hover:bg-indigo-50 border-0 shadow-lg font-bold h-12 px-6 rounded-2xl transition-transform active:scale-95"
             >
                <Plus className="h-5 w-5 mr-2" />
-               Tambah User
+               Tambah Petugas
             </Button>
          </div>
       </div>
@@ -165,7 +165,7 @@ export default function UsersPage() {
          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input 
-               placeholder="Cari berdasarkan nama atau email..." 
+               placeholder="Cari petugas..." 
                className="w-full pl-10 pr-4 py-3 bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
@@ -190,19 +190,16 @@ export default function UsersPage() {
                  <UserCog className="w-10 h-10" />
               </div>
               <h3 className="text-slate-900 font-bold text-lg">Tidak ada pengguna</h3>
-              <p className="text-slate-500 text-sm mt-1">Gunakan tombol di atas untuk mendaftarkan akun baru.</p>
            </div>
         ) : (
            <>
             {filteredUsers.map((user, index) => (
                <Card 
-                /* Solusi Error UNIQUE KEY: Gunakan UID atau gabungan Index */
                 key={user.uid || `user-${index}`} 
                 hoverable 
                 className="group p-5 border-slate-100 transition-all hover:border-indigo-200"
                >
                   <div className="flex items-start gap-4">
-                     {/* Avatar Inisial */}
                      <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shadow-sm transition-transform group-hover:scale-110",
                         user.role === 'master' ? 'bg-indigo-100 text-indigo-700' :
@@ -217,11 +214,11 @@ export default function UsersPage() {
                               {user.name}
                            </h3>
                            <Badge 
-                              variant={user.role === 'master' ? 'neutral' : user.role === 'puskesmas' ? 'default' : 'success'}
+                              variant={user.role === 'master' ? 'neutral' : 'default'}
                               className="text-[9px]"
                            >
                               {user.role === 'master' ? 'Master' :
-                               user.role === 'puskesmas' ? 'Puskesmas' : 'Kader'}
+                               user.role === 'puskesmas' ? 'Petugas Pusk.' : 'Kader/Lain'}
                            </Badge>
                         </div>
                         
@@ -233,13 +230,12 @@ export default function UsersPage() {
                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
                               <Building2 className="w-3 h-3 text-slate-400" />
                               <span className="truncate">
-                                 {user.role === 'kader' ? getPosyanduName(user.posyanduId) : "Akses Global"}
+                                 {user.role === 'puskesmas' ? getPuskesmasName(user.puskesmasId) : "Akses Global"}
                               </span>
                            </div>
                         </div>
                      </div>
 
-                     {/* Action Button */}
                      {user.role !== 'master' && (
                         <button 
                            onClick={() => handleDelete(user.uid, user.name)}
@@ -260,7 +256,7 @@ export default function UsersPage() {
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title="Daftarkan Pengguna Baru"
+        title="Daftarkan Petugas Puskesmas"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
@@ -306,28 +302,27 @@ export default function UsersPage() {
               label="Jabatan / Role"
               value={formData.role}
               onChange={(e) => setFormData({...formData, role: e.target.value as any})}
+              disabled // Locked to 'puskesmas' only for Master Admin
             >
-              <option value="kader">Kader Posyandu</option>
               <option value="puskesmas">Petugas Puskesmas</option>
             </Select>
+            <p className="text-[10px] text-slate-400 ml-1">Master Admin hanya mendaftarkan akun level Puskesmas.</p>
           </div>
 
-          {formData.role === "kader" && (
-            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
               <Select 
-                label="Lokasi Penugasan (Posyandu)"
-                value={formData.posyanduId}
-                onChange={(e) => setFormData({...formData, posyanduId: e.target.value})}
+                label="Penugasan Wilayah (Puskesmas)"
+                value={formData.puskesmasId}
+                onChange={(e) => setFormData({...formData, puskesmasId: e.target.value})}
                 required
               >
-                <option value="">-- Pilih Posyandu Tujuan --</option>
-                {posyandus.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.village})</option>
+                <option value="">-- Pilih Puskesmas --</option>
+                {puskesmasEntities.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.district})</option>
                 ))}
               </Select>
-              <p className="text-[10px] text-slate-400 ml-1">Kader hanya akan bisa melihat data dari posyandu yang dipilih.</p>
-            </div>
-          )}
+              <p className="text-[10px] text-slate-400 ml-1">User ini akan menjadi admin untuk wilayah tersebut.</p>
+          </div>
 
           <div className="pt-6 flex justify-end gap-3">
             <Button type="button" variant="ghost" className="text-slate-500" onClick={() => setIsModalOpen(false)}>
@@ -340,7 +335,6 @@ export default function UsersPage() {
         </form>
       </Modal>
 
-      {/* Toast Notif */}
       <Toast 
         message={toast.message} 
         type={toast.type} 

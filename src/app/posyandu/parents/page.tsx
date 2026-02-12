@@ -9,7 +9,9 @@ import {
   Trash2, 
   Users, 
   Mail, 
-  MapPin 
+  MapPin,
+  Lock,
+  ChevronRight
 } from "lucide-react";
 
 // UI Components
@@ -17,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Toast, ToastType } from "@/components/ui/Toast";
 
 import { getParentsByPosyandu, createParentAccount } from "@/lib/services/parents";
@@ -26,6 +29,8 @@ import { cn } from "@/lib/utils";
 
 export default function ParentsPage() {
   const { userProfile } = useAuth();
+  
+  // Data State
   const [parents, setParents] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -59,6 +64,7 @@ export default function ParentsPage() {
       setParents(data);
     } catch (err) {
       console.error(err);
+      showToast("Gagal memuat data orang tua.", "error");
     } finally {
       setLoading(false);
     }
@@ -72,17 +78,39 @@ export default function ParentsPage() {
     e.preventDefault();
     if (!userProfile?.posyanduId) return;
 
+    // Validasi sederhana
+    if (formData.password.length < 6) {
+        showToast("Password minimal 6 karakter.", "error");
+        return;
+    }
+
     setIsSubmitting(true);
     try {
       await createParentAccount(userProfile.posyanduId, formData);
       await fetchData();
       setIsModalOpen(false);
       setFormData({ name: "", email: "", password: "" });
-      showToast("Akun Orang Tua berhasil dibuat! ✅", "success");
+      showToast("Akun Orang Tua berhasil dibuat! 🎉", "success");
     } catch (err: any) {
-      showToast("Gagal: " + err.message, "error");
+      if (err.code === "auth/email-already-in-use") {
+        showToast("Email sudah terdaftar.", "error");
+      } else {
+        showToast("Gagal membuat akun: " + err.message, "error");
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (uid: string, name: string) => {
+    if (confirm(`PERINGATAN: Hapus akun ${name}? Orang tua tidak akan bisa login lagi untuk melihat data anaknya.`)) {
+        try {
+            await deleteUserFirestore(uid);
+            await fetchData();
+            showToast("Akun berhasil dihapus.", "info");
+        } catch (err) {
+            showToast("Gagal menghapus akun.", "error");
+        }
     }
   };
 
@@ -94,8 +122,8 @@ export default function ParentsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 font-sans pb-24">
       
-      {/* --- MODERN HERO HEADER --- */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-emerald-600 to-emerald-500 p-6 md:p-8 shadow-xl shadow-emerald-900/5 overflow-hidden">
+      {/* --- MODERN HERO HEADER (Sesuai style Data Balita) --- */}
+      <div className="relative rounded-3xl bg-gradient-to-r from-teal-600 to-emerald-600 p-6 md:p-8 shadow-xl shadow-teal-900/10 overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
            <Users className="w-48 h-48 text-white transform translate-x-10 -translate-y-10" />
@@ -106,11 +134,11 @@ export default function ParentsPage() {
            <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
                  <MapPin className="w-3.5 h-3.5" />
-                 <span>Posyandu Mawar 01</span>
+                 <span>Manajemen Akses</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Data Orang Tua</h1>
               <p className="text-emerald-50 text-sm md:text-base max-w-lg leading-relaxed opacity-90">
-                 Kelola akun orang tua untuk akses fitur pemantauan mandiri di aplikasi SAESTU.
+                 Kelola akun orang tua agar mereka dapat memantau tumbuh kembang anak secara mandiri melalui aplikasi.
               </p>
            </div>
 
@@ -127,7 +155,7 @@ export default function ParentsPage() {
               </div>
 
               <Button 
-                 className="h-auto py-3 px-6 bg-white text-emerald-700 hover:bg-emerald-50 hover:scale-105 active:scale-95 border-0 shadow-lg font-bold transition-all"
+                 className="h-auto py-3 px-6 bg-white text-teal-700 hover:bg-teal-50 hover:scale-105 active:scale-95 border-0 shadow-lg font-bold transition-all"
                  onClick={() => setIsModalOpen(true)}
               >
                  <Plus className="h-5 w-5 mr-2" />
@@ -157,7 +185,7 @@ export default function ParentsPage() {
         {loading ? (
           // SKELETON LOADER
           [1, 2, 3].map((i) => (
-            <Card key={i} className="flex gap-4 items-center animate-pulse border-slate-100">
+            <Card key={i} className="flex gap-4 items-center animate-pulse border-slate-100 p-4">
               <div className="w-12 h-12 rounded-full bg-slate-100"></div>
               <div className="flex-1 space-y-2">
                 <div className="h-4 bg-slate-100 rounded w-1/3"></div>
@@ -171,15 +199,19 @@ export default function ParentsPage() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                <User className="h-10 w-10 text-slate-300" />
             </div>
-            <h3 className="text-slate-900 font-bold text-lg">Belum ada data</h3>
+            <h3 className="text-slate-900 font-bold text-lg">Belum ada akun</h3>
             <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">
-              Tambahkan akun orang tua agar mereka bisa login.
+              Daftarkan orang tua agar data balita bisa terhubung.
             </p>
           </div>
         ) : (
           // DATA LIST
           filteredParents.map((parent) => (
-            <Card key={parent.uid} hoverable className="group relative flex items-center justify-between p-4 cursor-default">
+            <Card 
+                key={parent.uid} 
+                hoverable 
+                className="group relative flex items-center justify-between p-4 transition-all border-slate-100 hover:border-emerald-200"
+            >
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-lg font-bold text-emerald-700 shadow-sm group-hover:scale-105 transition-transform">
                   {parent.name.charAt(0).toUpperCase()}
@@ -198,14 +230,8 @@ export default function ParentsPage() {
 
               {/* Delete Button */}
               <button 
-                onClick={async () => {
-                  if(confirm(`Hapus akun ${parent.name}?`)) {
-                    await deleteUserFirestore(parent.uid);
-                    showToast("Akun berhasil dihapus", "info");
-                    fetchData();
-                  }
-                }}
-                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all"
+                onClick={() => handleDelete(parent.uid, parent.name)}
+                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                 title="Hapus Akun"
               >
                 <Trash2 className="h-5 w-5" />
@@ -243,22 +269,25 @@ export default function ParentsPage() {
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
-            <p className="text-[10px] text-slate-400 px-1">Pastikan email aktif atau buatkan email baru.</p>
+            <p className="text-[10px] text-slate-400 px-1">Pastikan email aktif atau gunakan format <i>ibu.nama@posyandu.com</i></p>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password Sementara</label>
-            <Input 
-              type="text"
-              placeholder="Minimal 6 karakter" 
-              required
-              className="bg-slate-50 border-transparent focus:bg-white transition-all h-11 font-mono"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
+            <div className="relative">
+                <Input 
+                type="text"
+                placeholder="Minimal 6 karakter" 
+                required
+                className="bg-slate-50 border-transparent focus:bg-white transition-all h-11 font-mono pl-10"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 mt-4">
             <Button 
                type="button" 
                variant="ghost" 
@@ -272,7 +301,7 @@ export default function ParentsPage() {
                isLoading={isSubmitting}
                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 shadow-lg shadow-emerald-200"
             >
-               Daftarkan
+               Buat Akun
             </Button>
           </div>
         </form>

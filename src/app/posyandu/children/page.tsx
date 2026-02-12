@@ -11,7 +11,8 @@ import {
   Filter,
   Calendar,
   User as UserIcon,
-  MapPin
+  MapPin,
+  Scale
 } from "lucide-react";
 
 // UI Components
@@ -22,7 +23,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Toast, ToastType } from "@/components/ui/Toast";
 
-// Hapus deleteChild dari import karena fiturnya dipindah ke halaman detail
+// Services
 import { getChildrenByPosyandu, addChild, CreateChildInput } from "@/lib/services/children";
 import { getParentsByPosyandu } from "@/lib/services/parents";
 import { Child, UserProfile } from "@/types/schema";
@@ -79,6 +80,7 @@ export default function ChildrenPage() {
       setParents(parentsData);
     } catch (err) {
       console.error(err);
+      showToast("Gagal mengambil data.", "error");
     } finally {
       setLoading(false);
     }
@@ -95,6 +97,7 @@ export default function ChildrenPage() {
     setIsSubmitting(true);
     try {
       let parentName = formData.parentName;
+      // Jika parentId dipilih, ambil nama dari daftar parents
       if (formData.parentId) {
         const selectedParent = parents.find(p => p.uid === formData.parentId);
         if (selectedParent) parentName = selectedParent.name;
@@ -109,7 +112,7 @@ export default function ChildrenPage() {
       await fetchData();
       setIsModalOpen(false);
       resetForm();
-      showToast("Data Anak berhasil ditambahkan!", "success");
+      showToast("Data Anak berhasil ditambahkan! 🎉", "success");
     } catch (err) {
       showToast("Gagal menambah data anak.", "error");
     } finally {
@@ -132,6 +135,7 @@ export default function ChildrenPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 font-sans pb-24">
+      
       {/* --- MODERN HERO HEADER --- */}
       <div className="relative rounded-3xl bg-gradient-to-r from-teal-600 to-teal-500 p-6 md:p-8 shadow-xl shadow-teal-900/5 overflow-hidden">
         {/* Decorative Background Elements */}
@@ -221,15 +225,18 @@ export default function ChildrenPage() {
         ) : (
           // DATA LIST
           filteredChildren.map((child) => {
-            const age = calculateAgeInMonths(child.dob as Date);
+            const age = calculateAgeInMonths(child.dob instanceof Date ? child.dob : (child.dob as any).toDate());
+            const isStunted = child.lastLengthStatus === 'inadequate';
+            const isUnderweight = child.lastWeightStatus === 'inadequate';
+            
             return (
               <Card 
                 key={child.id} 
                 hoverable
                 onClick={() => router.push(`/posyandu/children/${child.id}`)}
-                className="group relative cursor-pointer active:scale-[0.99]"
+                className="group relative cursor-pointer active:scale-[0.99] transition-all border-slate-100 hover:border-teal-200"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 p-4">
                   {/* Avatar Gender */}
                   <div className={cn(
                     "h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md transition-transform group-hover:scale-105",
@@ -239,23 +246,35 @@ export default function ChildrenPage() {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 text-lg truncate group-hover:text-primary transition-colors">
-                      {child.name}
-                    </h3>
+                    <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-slate-800 text-lg truncate group-hover:text-teal-700 transition-colors">
+                        {child.name}
+                        </h3>
+                        {(isStunted || isUnderweight) && (
+                            <Badge variant="danger" className="text-[9px] px-1.5 h-5 animate-pulse">Pantau</Badge>
+                        )}
+                    </div>
+                    
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
-                      <Badge variant="neutral" className="gap-1 font-medium bg-slate-50 border-slate-100">
+                      <Badge variant="neutral" className="gap-1 font-medium bg-slate-50 border-slate-100 text-slate-500">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        {age} Bulan
+                        {age} Bln
                       </Badge>
                       <span className="flex items-center gap-1 truncate">
                         <UserIcon className="w-3 h-3 text-slate-400" />
                         {child.parentName}
                       </span>
                     </div>
+
+                    <div className="flex gap-3 mt-2">
+                        <div className="flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                           <Scale className="w-3 h-3 text-slate-400" /> {child.lastWeight || "-"} kg
+                        </div>
+                     </div>
                   </div>
 
-                  {/* Action Arrow (Delete button removed for cleaner UI & Safety) */}
-                  <div className="text-slate-300 group-hover:text-primary transition-colors">
+                  {/* Action Arrow */}
+                  <div className="text-slate-300 group-hover:text-teal-500 transition-colors">
                     <ChevronRight className="h-6 w-6" />
                   </div>
                 </div>
@@ -265,7 +284,7 @@ export default function ChildrenPage() {
         )}
       </div>
 
-      {/* --- MODAL TAMBAH ANAK --- */}
+      {/* --- MODAL TAMBAH ANAK (FULL LOGIC RESTORED) --- */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
@@ -299,7 +318,7 @@ export default function ChildrenPage() {
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Gender</label>
                    <div className="relative">
                       <select 
-                        className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                        className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-3 text-sm appearance-none cursor-pointer"
                         value={formData.gender} 
                         onChange={(e) => setFormData({...formData, gender: e.target.value as "L"|"P"})}
                       >
@@ -336,21 +355,21 @@ export default function ChildrenPage() {
              </div>
           </div>
 
-          <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 grid grid-cols-2 gap-4">
+          <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 grid grid-cols-2 gap-4">
              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Berat Lahir (kg)</label>
+                <label className="text-xs font-bold text-teal-700 uppercase tracking-wider ml-1">Berat Lahir (kg)</label>
                 <Input 
                    type="number" step="0.01" required 
-                   className="bg-white border-primary/20 text-center font-bold text-lg h-12"
+                   className="bg-white border-teal-200 text-center font-bold text-lg h-12 focus:ring-teal-500"
                    value={formData.initialWeight || ""} 
                    onChange={(e) => setFormData({...formData, initialWeight: parseFloat(e.target.value)})} 
                 />
              </div>
              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-primary uppercase tracking-wider ml-1">Panjang (cm)</label>
+                <label className="text-xs font-bold text-teal-700 uppercase tracking-wider ml-1">Panjang (cm)</label>
                 <Input 
                    type="number" step="0.1" required 
-                   className="bg-white border-primary/20 text-center font-bold text-lg h-12"
+                   className="bg-white border-teal-200 text-center font-bold text-lg h-12 focus:ring-teal-500"
                    value={formData.initialHeight || ""} 
                    onChange={(e) => setFormData({...formData, initialHeight: parseFloat(e.target.value)})} 
                 />
@@ -365,7 +384,7 @@ export default function ChildrenPage() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data Orang Tua</label>
                 <div className="relative">
                    <select 
-                      className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                      className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-3 text-sm appearance-none cursor-pointer"
                       value={formData.parentId} 
                       onChange={(e) => setFormData({...formData, parentId: e.target.value})}
                    >
@@ -377,7 +396,7 @@ export default function ChildrenPage() {
              </div>
              
              {!formData.parentId && (
-                <div className="space-y-1.5 animate-fade-in">
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
                    <Input 
                       required={!formData.parentId} 
                       placeholder="Nama Ibu/Ayah (Manual)"
@@ -401,7 +420,7 @@ export default function ChildrenPage() {
             <Button 
                type="submit" 
                isLoading={isSubmitting}
-               className="bg-primary hover:bg-primary-hover px-6"
+               className="bg-teal-600 hover:bg-teal-700 px-6 text-white font-bold shadow-lg shadow-teal-200"
             >
                Simpan Data
             </Button>

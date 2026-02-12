@@ -6,7 +6,7 @@ import {
   getDocs, 
   query, 
   where, 
-  orderBy, // Kita import lagi
+  orderBy, 
   serverTimestamp,
   Timestamp 
 } from "firebase/firestore";
@@ -47,10 +47,6 @@ export const addChild = async (data: CreateChildInput) => {
 
 export const getChildrenByPosyandu = async (posyanduId: string): Promise<Child[]> => {
   try {
-    // SOLUSI JANGKA PANJANG (SCALABLE):
-    // Kita gunakan orderBy di level database.
-    // Syarat: Wajib membuat Composite Index di Firebase Console (Klik link di error log).
-    // Kelebihan: Cepat walau data ribuan, mendukung pagination.
     const q = query(
       collection(db, COLLECTION_NAME), 
       where("posyanduId", "==", posyanduId),
@@ -70,7 +66,27 @@ export const getChildrenByPosyandu = async (posyanduId: string): Promise<Child[]
 
   } catch (error) {
     console.error("Error fetching children:", error);
-    // Jika index belum jadi, error akan tertangkap di sini
+    throw error;
+  }
+};
+
+// --- [BARU] Fungsi untuk Dashboard Monitoring ---
+export const getAllChildren = async (): Promise<Child[]> => {
+  try {
+    // Kita ambil semua data untuk perhitungan statistik global/regional
+    const q = query(collection(db, COLLECTION_NAME));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        dob: data.dob?.toDate ? data.dob.toDate() : new Date(data.dob),
+      } as Child;
+    });
+  } catch (error) {
+    console.error("Error fetching all children:", error);
     throw error;
   }
 };
