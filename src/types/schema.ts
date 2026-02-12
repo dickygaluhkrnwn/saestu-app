@@ -6,19 +6,19 @@ export interface UserProfile {
   email: string;
   name: string;
   role: "master" | "puskesmas" | "kader" | "parent";
-  posyanduId?: string; // Optional: Hanya untuk Kader
-  puskesmasId?: string; // Optional: Hanya untuk Petugas Puskesmas
+  posyanduId?: string; 
+  puskesmasId?: string; 
   createdAt: Timestamp | Date;
 }
 
-// --- MASTER DATA ---
+// --- MASTER DATA POSYANDU ---
 export interface Posyandu {
   id: string;
   name: string;
   village: string;
   district: string;
   address: string;
-  puskesmasId?: string; // Optional link ke Puskesmas
+  puskesmasId?: string; 
   createdAt: Timestamp | Date;
 }
 
@@ -28,19 +28,17 @@ export interface Child {
   name: string;
   nik: string;
   gender: "L" | "P";
-  pob: string; // Place of Birth
+  pob: string; 
   dob: Timestamp | Date;
   
   parentName: string;
-  parentId?: string; // [BARU] Link ke UserProfile (Role: Parent) jika ortu sudah punya akun
+  parentId?: string; 
   
   posyanduId: string;
   initialWeight: number;
   initialHeight: number;
   createdAt: Timestamp | Date;
 
-  // [BARU] Field Denormalisasi untuk Dashboard & Performa
-  // Di-update setiap kali ada pengukuran baru
   lastWeightStatus?: "adequate" | "inadequate" | "excess" | "unknown";
   lastLengthStatus?: "adequate" | "inadequate" | "unknown";
   lastMeasurementDate?: Timestamp | Date;
@@ -51,21 +49,33 @@ export interface Measurement {
   id: string;
   childId: string;
   posyanduId: string;
-  date: Timestamp | Date; // Tanggal pengukuran
-  ageInMonths: number;    // Usia saat ukur
+  date: Timestamp | Date; 
+  ageInMonths: number;    
   
-  weight: number;         // Berat (kg)
-  height: number;         // Tinggi/Panjang (cm)
-  headCircumference?: number; // Lingkar Kepala (opsional)
+  weight: number;         
+  height: number;         
+  headCircumference?: number; 
 
-  // Hasil Analisis WHO Engine
   weightStatus: "adequate" | "inadequate" | "excess" | "unknown";
   lengthStatus: "adequate" | "inadequate" | "excess" | "unknown";
   
-  weightIncrement?: number; // Kenaikan berat (gram) dari pengukuran sebelumnya
-  lengthIncrement?: number; // Pertambahan panjang (cm) dari pengukuran sebelumnya
+  weightIncrement?: number; 
+  lengthIncrement?: number; 
   
-  notes?: string;         // Pesan analisis (misal: "Hati-hati, kenaikan kurang")
+  notes?: string;         
   createdAt: Timestamp | Date;
-  createdBy: string;      // ID Kader penginput
+  createdBy: string;      
+}
+
+// --- [BARU] DATABASE MAKANAN LOKAL (NUTRISURVEY FORMAT) ---
+export interface MasterFood {
+  id: string;
+  code: string;       // Kode (cth: ZIN0001)
+  name: string;       // Foods (cth: kemiri, beras merah)
+  energyKJ: number;   // kJ
+  protein: number;    // protein (g)
+  fat: number;        // fat (g)
+  carbs: number;      // carbohydr. (g)
+  puskesmasId: string; // Penanda siapa yang menginput data ini
+  createdAt: Timestamp | Date;
 }

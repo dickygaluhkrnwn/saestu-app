@@ -5,13 +5,12 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { Activity, AlertCircle, HeartPulse, ShieldCheck, ChevronLeft } from "lucide-react";
+import { Activity, AlertCircle, ShieldCheck, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 // UI Components
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,12 +37,14 @@ export default function LoginPage() {
         const userData = docSnap.data();
         const role = userData.role;
 
-        // 3. Arahkan sesuai jabatan
+        // 3. Arahkan sesuai jabatan (Role Routing)
         if (role === "master") {
           router.push("/master");
+        } else if (role === "puskesmas") { 
+          router.push("/puskesmas");
         } else if (role === "kader") {
           router.push("/posyandu");
-        } else if (role === "parent") {
+        } else if (role === "parent") { // <-- LOGIKA ROUTING ORANG TUA
           router.push("/parent");
         } else {
           router.push("/"); // Default fallback
