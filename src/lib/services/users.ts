@@ -81,4 +81,4 @@ export const deleteUserFirestore = async (uid: string) => {
     console.error("Error deleting user:", error);
     throw error;
   }
-};
+}; 
