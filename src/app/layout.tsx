@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-// [UPDATE FIX]: Menggunakan alias @ agar VS Code tidak bingung
 import "@/app/globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+
+// [NEW IMPORT]: Vercel Analytics untuk tracking visitor
+import { Analytics } from "@vercel/analytics/next";
 
 // Konfigurasi Font
 const fontSans = Plus_Jakarta_Sans({ 
@@ -52,6 +54,10 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        
+        {/* [NEW COMPONENT]: Tracking Vercel aktif di seluruh aplikasi */}
+        <Analytics />
+        
       </body>
     </html>
   );

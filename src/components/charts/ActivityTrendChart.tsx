@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Card } from '@/components/ui/Card'; // FIX: Named import
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card } from '@/components/ui/Card'; 
 
 const data = [
   { name: 'Jan', pengukuran: 400 },
@@ -15,45 +15,53 @@ const data = [
 
 export default function ActivityTrendChart() {
   return (
-    <Card className="p-6 border border-slate-200 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h3 className="text-lg font-bold text-slate-800">Tren Partisipasi</h3>
-          <p className="text-xs text-slate-500">Jumlah balita ditimbang 6 bulan terakhir</p>
-        </div>
+    <Card className="p-5 sm:p-6 border-slate-100 shadow-sm rounded-3xl bg-white">
+      <div className="mb-6">
+        <h3 className="text-base font-black text-slate-900 tracking-tight">Tren Partisipasi</h3>
+        <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">Jumlah balita ditimbang 6 bln terakhir</p>
       </div>
 
-      <div className="h-[300px] w-full">
+      <div className="h-[250px] w-full ml-[-15px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
+          <AreaChart
             data={data}
-            margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <defs>
+              <linearGradient id="colorPengukuran" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{fill: '#64748B', fontSize: 12}} 
+                tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} 
                 dy={10}
             />
             <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{fill: '#64748B', fontSize: 12}}
+                tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}}
+                width={40}
             />
             <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                contentStyle={{ borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                itemStyle={{ color: '#059669' }}
             />
-            <Line 
+            <Area 
                 type="monotone" 
                 dataKey="pengukuran" 
-                stroke="#059669" 
+                stroke="#10b981" 
                 strokeWidth={3}
-                dot={{ r: 4, fill: '#059669', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6 }} 
+                fillOpacity={1} 
+                fill="url(#colorPengukuran)" 
+                activeDot={{ r: 6, strokeWidth: 0, fill: '#059669' }} 
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </Card>

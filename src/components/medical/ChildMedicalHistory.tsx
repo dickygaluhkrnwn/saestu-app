@@ -8,16 +8,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { 
-  Weight, 
-  Ruler, 
   Activity, 
   History, 
   Plus, 
-  TrendingUp, 
   AlertCircle,
   Edit2,
   Trash2,
-  Calendar
+  CalendarDays,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 
 interface ChildMedicalHistoryProps {
@@ -47,8 +46,6 @@ export default function ChildMedicalHistory({
     return new Date(date);
   };
 
-  const lastMeasurement = measurements.length > 0 ? measurements[0] : null;
-
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'adequate': return 'success';
@@ -61,222 +58,185 @@ export default function ChildMedicalHistory({
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'adequate': return 'Normal';
-      case 'inadequate': return 'Risiko/Kurang';
+      case 'inadequate': return 'Waspada';
       case 'excess': return 'Berlebih';
       default: return 'Data Awal';
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* --- TABS NAVIGATION --- */}
-      <div className="flex p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-inner">
+    <div className="space-y-4">
+      
+      {/* --- TABS NAVIGATION (IOS SEGMENTED CONTROL STYLE) --- */}
+      <div className="flex p-1.5 bg-slate-100 rounded-[1.25rem] border border-slate-200">
         <button
           onClick={() => setActiveTab('chart')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
+            "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all duration-300",
             activeTab === 'chart' 
-              ? "bg-white text-emerald-700 shadow-md translate-y-[-1px]" 
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-white text-slate-900 shadow-sm" 
+              : "text-slate-400 hover:text-slate-600"
           )}
         >
-          <Activity className="w-3.5 h-3.5" />
-          Grafik Pertumbuhan
+          <Activity className="w-4 h-4" />
+          Grafik WHO
         </button>
         <button
           onClick={() => setActiveTab('history')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
+            "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all duration-300",
             activeTab === 'history' 
-              ? "bg-white text-emerald-700 shadow-md translate-y-[-1px]" 
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-white text-slate-900 shadow-sm" 
+              : "text-slate-400 hover:text-slate-600"
           )}
         >
-          <History className="w-3.5 h-3.5" />
-          Log Riwayat
+          <History className="w-4 h-4" />
+          Log Bulanan
         </button>
       </div>
 
       {/* --- CONTENT AREA --- */}
-      <div className="min-h-[500px]">
+      <div>
+        
+        {/* TAB 1: GRAFIK */}
         {activeTab === 'chart' && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-            {/* 1. Last Status Overview */}
-            {lastMeasurement ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="md:col-span-1 p-5 bg-white border-slate-200 shadow-sm flex flex-col justify-between rounded-3xl">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] mb-1">Update Terakhir</p>
-                    <h3 className="text-sm font-bold text-slate-700">
-                      {ensureDate(lastMeasurement.date).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric'})}
-                    </h3>
-                  </div>
-                  <div className="mt-4">
-                    <Badge variant={getStatusVariant(lastMeasurement.weightStatus)} className="w-full justify-center py-1 rounded-lg text-[10px] font-black uppercase">
-                      {getStatusLabel(lastMeasurement.weightStatus)}
-                    </Badge>
-                  </div>
-                </Card>
-
-                <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50/50 p-4 rounded-3xl border border-blue-100 flex items-center gap-4">
-                    <div className="p-2.5 bg-blue-100 text-blue-600 rounded-2xl shadow-sm">
-                      <Weight className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-blue-600/70 font-black uppercase tracking-widest">Berat</p>
-                      <p className="text-xl font-black text-slate-800">{lastMeasurement.weight}<span className="text-xs ml-0.5 font-bold text-slate-400">kg</span></p>
-                    </div>
-                  </div>
-                  <div className="bg-pink-50/50 p-4 rounded-3xl border border-pink-100 flex items-center gap-4">
-                    <div className="p-2.5 bg-pink-100 text-pink-600 rounded-2xl shadow-sm">
-                      <Ruler className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-pink-600/70 font-black uppercase tracking-widest">Tinggi</p>
-                      <p className="text-xl font-black text-slate-800">{lastMeasurement.height}<span className="text-xs ml-0.5 font-bold text-slate-400">cm</span></p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] text-center">
-                <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-bold text-sm">Belum ada riwayat pengukuran.</p>
-              </div>
-            )}
-
-            {/* 2. Main Chart Card */}
-            <Card className="p-0 border-slate-200 shadow-sm rounded-[2rem] overflow-visible bg-white">
-              <div className="p-6 pb-2 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                 <div>
-                    <h3 className="font-black text-slate-800 tracking-tight">Tren Pertumbuhan</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Persentil WHO Standard</p>
-                 </div>
-                 <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
-                    <button
-                      onClick={() => setChartType('weight')}
-                      className={cn(
-                        "px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase",
-                        chartType === 'weight' ? "bg-white shadow-sm text-blue-600" : "text-slate-50"
-                      )}
-                    >
-                      Berat
-                    </button>
-                    <button
-                      onClick={() => setChartType('length')}
-                      className={cn(
-                        "px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase",
-                        chartType === 'length' ? "bg-white shadow-sm text-pink-600" : "text-slate-50"
-                      )}
-                    >
-                      Tinggi
-                    </button>
-                 </div>
+          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+            
+            <Card className="p-0 border-0 shadow-none overflow-hidden bg-transparent">
+              
+              {/* Chart Type Toggle */}
+              <div className="flex bg-slate-100 p-1.5 rounded-[1.2rem] w-full mb-4">
+                 <button
+                   onClick={() => setChartType('weight')}
+                   className={cn(
+                     "flex-1 py-2 text-[10px] sm:text-xs font-black rounded-xl transition-all uppercase tracking-wider",
+                     chartType === 'weight' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400"
+                   )}
+                 >
+                   Kurva Berat Badan
+                 </button>
+                 <button
+                   onClick={() => setChartType('length')}
+                   className={cn(
+                     "flex-1 py-2 text-[10px] sm:text-xs font-black rounded-xl transition-all uppercase tracking-wider",
+                     chartType === 'length' ? "bg-white shadow-sm text-blue-600" : "text-slate-400"
+                   )}
+                 >
+                   Kurva Tinggi Badan
+                 </button>
               </div>
               
-              {/* PERBAIKAN TATA LETAK:
-                1. pb-14: Memberi ruang sangat luas di bawah untuk label bulan.
-                2. mt-[-10px]: Menarik chart sedikit ke atas agar lebih rapat ke header card.
-                3. h-[450px]: Memberi ruang vertikal yang cukup agar tidak tertekan.
-              */}
-              <div className="px-2 sm:px-6 pt-2 pb-14 bg-white h-[450px] w-full relative overflow-visible mt-[-10px]">
+              {/* Area Grafik (Tinggi disesuaikan agar pas di layar HP tanpa harus scroll pusing) */}
+              <div className="bg-white rounded-3xl border border-slate-100 p-2 sm:p-4 pt-4 pb-14 h-[400px] w-full relative">
                 <GrowthChart 
                   measurements={measurements} 
                   gender={child.gender} 
                   type={chartType} 
                 />
               </div>
+
             </Card>
 
+            {/* Tombol Input (Hanya muncul jika bukan ReadOnly) */}
             {!readOnly && onAddMeasurement && (
               <Button
                 onClick={onAddMeasurement} 
-                className="w-full h-16 text-lg shadow-xl shadow-emerald-200/50 bg-emerald-600 hover:bg-emerald-700 border-0 font-black rounded-[2rem] transition-all active:scale-95"
+                className="w-full h-14 text-sm bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl transition-all active:scale-95 shadow-md mt-4"
               >
-                <Plus className="w-6 h-6 mr-2 stroke-[3px]" />
-                Input Timbangan Baru
+                <Plus className="w-5 h-5 mr-2" />
+                Input Data Timbang Baru
               </Button>
             )}
           </div>
         )}
 
+        {/* TAB 2: RIWAYAT LIST */}
         {activeTab === 'history' && (
-          <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500 pb-20">
+          <div className="space-y-4 animate-in slide-in-from-right-8 duration-300">
              {measurements.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
-                   <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                   <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Belum ada riwayat</p>
+                <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                   <History className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                   <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Belum ada riwayat ukur</p>
                 </div>
              ) : (
                measurements.map((m) => (
-                  <Card key={m.id} className="relative overflow-hidden group border-slate-100 hover:border-emerald-200 transition-all rounded-3xl p-0 shadow-sm">
+                  <Card key={m.id} className="relative overflow-hidden group border-slate-100 bg-white rounded-3xl p-0 shadow-sm">
+                     
+                     {/* Color Bar Indicator di sebelah Kiri */}
                      <div className={cn(
-                       "absolute left-0 top-0 bottom-0 w-1.5 transition-colors",
+                       "absolute left-0 top-0 bottom-0 w-2 transition-colors",
                        m.weightStatus === 'adequate' ? 'bg-emerald-500' : 
-                       m.weightStatus === 'inadequate' ? 'bg-rose-500' : 'bg-amber-400'
+                       m.weightStatus === 'inadequate' ? 'bg-amber-500' : 'bg-rose-500'
                      )} />
 
-                     <div className="p-5">
-                        <div className="flex justify-between items-start mb-4">
-                           <div className="flex items-center gap-3">
-                              <div className="p-2 bg-slate-50 rounded-xl">
-                                 <Calendar className="w-4 h-4 text-slate-400" />
+                     <div className="p-4 sm:p-5 pl-6 sm:pl-7">
+                        
+                        {/* Header Riwayat (Tanggal & Usia) */}
+                        <div className="flex justify-between items-start border-b border-slate-50 pb-3 mb-3">
+                           <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-slate-50 rounded-xl text-slate-400">
+                                 <CalendarDays className="w-4 h-4" />
                               </div>
                               <div>
-                                 <p className="text-sm font-black text-slate-800">
+                                 <p className="text-xs sm:text-sm font-black text-slate-800">
                                    {ensureDate(m.date).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
                                  </p>
-                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Usia: {m.ageInMonths} Bulan</p>
+                                 <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Usia {m.ageInMonths} Bulan</p>
                               </div>
                            </div>
                            
-                           <div className="flex items-center gap-2">
-                              <Badge variant={getStatusVariant(m.weightStatus)} className="text-[9px] font-black uppercase px-2 py-0.5 border-0">
-                                {getStatusLabel(m.weightStatus)}
-                              </Badge>
-                              
-                              {!readOnly && (
-                                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                  <button 
-                                    onClick={() => onEditMeasurement?.(m)}
-                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => onDeleteMeasurement?.(m.id)}
-                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
+                           {/* Aksi Edit/Delete (Jika bukan readonly) */}
+                           {!readOnly && (
+                             <div className="flex items-center gap-1">
+                               <button onClick={() => onEditMeasurement?.(m)} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 rounded-lg transition-all active:scale-95">
+                                 <Edit2 className="w-3.5 h-3.5" />
+                               </button>
+                               <button onClick={() => onDeleteMeasurement?.(m.id)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 rounded-lg transition-all active:scale-95">
+                                 <Trash2 className="w-3.5 h-3.5" />
+                               </button>
+                             </div>
+                           )}
+                        </div>
+
+                        {/* Data Box (BB, TB, Kenaikan) */}
+                        <div className="grid grid-cols-2 gap-3">
+                           <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Berat Badan</p>
+                              <div className="flex items-end gap-2">
+                                 <p className="text-lg font-black text-slate-800 leading-none">{m.weight} <span className="text-[10px] text-slate-500 font-bold">kg</span></p>
+                                 {m.weightIncrement !== undefined && (
+                                   <div className={cn(
+                                      "flex items-center text-[9px] font-black px-1.5 py-0.5 rounded border mb-0.5",
+                                      m.weightIncrement > 0 ? "text-emerald-600 bg-emerald-50 border-emerald-100" : "text-rose-600 bg-rose-50 border-rose-100"
+                                   )}>
+                                     {m.weightIncrement > 0 ? <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> : <TrendingDown className="w-2.5 h-2.5 mr-0.5" />}
+                                     {m.weightIncrement > 0 ? "+" : ""}{m.weightIncrement}g
+                                   </div>
+                                 )}
+                              </div>
+                           </div>
+                           
+                           <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tinggi Badan</p>
+                              <p className="text-lg font-black text-slate-800 leading-none">{m.height} <span className="text-[10px] text-slate-500 font-bold">cm</span></p>
                            </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                           <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Berat</span>
-                              <div className="text-right">
-                                <p className="text-sm font-black text-slate-800">{m.weight} kg</p>
-                                {m.weightIncrement !== undefined && (
-                                  <p className={cn("text-[9px] font-black flex items-center justify-end", m.weightIncrement > 0 ? "text-emerald-600" : "text-rose-600")}>
-                                    {m.weightIncrement > 0 ? "+" : ""}{m.weightIncrement}g
-                                  </p>
-                                )}
-                              </div>
-                           </div>
-                           <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tinggi</span>
-                              <p className="text-sm font-black text-slate-800">{m.height} cm</p>
-                           </div>
+                        {/* Status Badges */}
+                        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-50">
+                           <Badge variant={getStatusVariant(m.weightStatus)} className="text-[8px] sm:text-[9px] border-0 py-0.5">
+                             BB: {getStatusLabel(m.weightStatus)}
+                           </Badge>
+                           <Badge variant={getStatusVariant(m.lengthStatus)} className="text-[8px] sm:text-[9px] border-0 py-0.5">
+                             TB: {getStatusLabel(m.lengthStatus)}
+                           </Badge>
                         </div>
                         
+                        {/* Catatan (Jika ada) */}
                         {m.notes && (
-                          <div className="mt-4 p-3 bg-amber-50/50 rounded-2xl border border-amber-100 flex gap-2">
+                          <div className="mt-3 p-3 bg-amber-50 rounded-xl flex gap-2">
                             <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                            <p className="text-[10px] text-amber-700 italic leading-relaxed">"{m.notes}"</p>
+                            <p className="text-[10px] text-amber-800 italic font-medium leading-relaxed">"{m.notes}"</p>
                           </div>
                         )}
                      </div>
