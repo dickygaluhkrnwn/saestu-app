@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* 🎨 SAESTU DESIGN SYSTEM (V2.0)
-  Theme: Modern Medical & Friendly
-  Based on Tailwind CSS v4
+/* 🎨 SAESTU DESIGN SYSTEM (V2.1 - ENTERPRISE LIGHT MODE ONLY)
+   Theme: Modern Medical, Clean, & Friendly
+   Based on Tailwind CSS v4
 */
 
 @theme {
@@ -26,114 +26,137 @@
   
   /* Background & Surface */
   --color-background: var(--color-slate-50); /* Soft Grey (Anti-Fatigue) */
-  --color-surface: #ffffff;                   /* Pure White (Card) */
+  --color-surface: #ffffff;                  /* Pure White (Card) */
   
   /* Typography Colors */
   --color-text-main: var(--color-slate-800);
   --color-text-muted: var(--color-slate-500);
   
   /* --- SHAPE SYSTEM --- */
-  --radius-card: 1rem;    /* 16px - Sudut Card Modern */
-  --radius-btn: 0.75rem;  /* 12px - Tombol Bulat Halus */
-  --radius-input: 0.75rem; /* 12px */
+  --radius-card: 1.5rem;    /* 24px - Sudut Card sangat membulat (Modern Mobile) */
+  --radius-btn: 1rem;       /* 16px - Tombol Bulat Halus */
+  --radius-input: 1rem;     /* 16px */
 }
 
 /* Base Reset & Typography */
 @layer base {
   body {
-    @apply bg-background text-text-main antialiased;
-    /* Font akan di-handle di layout.tsx, tapi kita set default sans di sini */
+    @apply bg-background text-text-main antialiased selection:bg-teal-200 selection:text-teal-900;
     font-feature-settings: "cv11", "ss01";
   }
 
-  /* Headings yang lebih tajam & modern */
+  /* 
+    [REVISI ENTERPRISE]:
+    Jangan paksakan warna text-slate-900 di sini. 
+    Biarkan warna Heading mengikuti (inherit) elemen pembungkusnya (Card putih/hitam). 
+  */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight text-slate-900;
+    @apply font-bold tracking-tight; 
+    /* Warna dihilangkan agar adaptif */
+  }
+
+  /* Default text color untuk Heading di layar putih */
+  h1, h2, h3 {
+    @apply text-slate-900;
+  }
+  h4, h5, h6 {
+    @apply text-slate-800;
   }
 }
 
-/* 🧩 COMPONENT PRIMITIVES 
-  Utility class khusus untuk komponen yang sering dipakai ulang
-*/
+/* 🧩 COMPONENT PRIMITIVES */
 @layer components {
 
   /* 1. MODERN CARD (Surface) */
   .card {
-    @apply bg-surface border border-slate-100 shadow-sm rounded-[var(--radius-card)] p-5;
+    @apply bg-surface border border-slate-100 shadow-sm rounded-[var(--radius-card)] p-5 relative overflow-hidden;
   }
   
   .card-hover {
-    @apply transition-shadow duration-300 hover:shadow-md hover:border-teal-100;
+    @apply transition-all duration-300 hover:shadow-md hover:border-teal-200 hover:-translate-y-0.5 active:scale-[0.98];
   }
 
-  /* 2. BUTTONS (Touch-Friendly) */
+  /* [NEW]: Card khusus background gelap (seperti di AI Nutrition) */
+  .card-dark {
+    @apply bg-slate-900 text-white border-0 shadow-xl shadow-slate-200;
+  }
+  
+  /* Logika Cerdas: Jika h1-h6 ada di dalam .card-dark, paksakan warna putih */
+  .card-dark h1, 
+  .card-dark h2, 
+  .card-dark h3, 
+  .card-dark h4, 
+  .card-dark h5, 
+  .card-dark h6,
+  .card-dark p {
+    @apply text-white;
+  }
+
+  /* 2. BUTTONS (Touch-Friendly Mobile) */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 
-           font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 
-           disabled:pointer-events-none rounded-[var(--radius-btn)] cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3.5 
+           font-black transition-all duration-200 active:scale-95 disabled:opacity-50 
+           disabled:pointer-events-none rounded-[var(--radius-btn)] cursor-pointer tracking-tight text-sm sm:text-base;
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground shadow-sm shadow-teal-200/50 hover:bg-primary-hover;
+    @apply bg-primary text-primary-foreground shadow-md shadow-teal-200/50 hover:bg-primary-hover;
   }
 
   .btn-secondary {
-    @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300;
+    @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm;
   }
 
   .btn-danger {
-    @apply bg-white text-rose-600 border border-rose-100 hover:bg-rose-50 hover:border-rose-200;
+    @apply bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100;
   }
 
   .btn-ghost {
     @apply text-slate-500 hover:bg-slate-100 hover:text-slate-700 bg-transparent;
   }
 
-  /* 3. INPUT FIELDS (Modern Filled/Outline Hybrid) */
+  /* 3. INPUT FIELDS (Mobile Finger Friendly) */
   .input-field {
-    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-[var(--radius-input)] text-slate-800 
-           placeholder:text-slate-400 outline-none transition-all duration-200
-           focus:border-primary focus:ring-4 focus:ring-primary-light;
+    @apply w-full px-4 py-3.5 bg-white border border-slate-200 rounded-[var(--radius-input)] text-slate-800 
+           placeholder:text-slate-400 outline-none transition-all duration-200 font-medium
+           focus:border-primary focus:ring-4 focus:ring-primary-light/50;
   }
   
   .label-text {
-    @apply block text-sm font-semibold text-slate-700 mb-1.5 ml-1;
+    @apply block text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1;
   }
   
   /* 4. STATUS BADGES */
   .badge {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-transparent;
   }
   
-  .badge-success { @apply bg-emerald-100 text-emerald-700; }
-  .badge-warning { @apply bg-amber-100 text-amber-700; }
-  .badge-danger  { @apply bg-rose-100 text-rose-700; }
-  .badge-neutral { @apply bg-slate-100 text-slate-600; }
+  .badge-success { @apply bg-emerald-50 text-emerald-600 border-emerald-100; }
+  .badge-warning { @apply bg-amber-50 text-amber-600 border-amber-100; }
+  .badge-danger  { @apply bg-rose-50 text-rose-600 border-rose-100; }
+  .badge-neutral { @apply bg-slate-50 text-slate-500 border-slate-200; }
+
+  /* 5. TEXT STYLES UTILITIES */
+  .text-brand {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500;
+  }
 }
 
-/* 🎨 UTILITIES FOR DARK SECTIONS
-   Pakai class ini di parent container yang punya background gelap
-*/
-.dark-section {
-  @apply text-white;
+/* ✨ UTILITIES & MICRO-ANIMATIONS */
+
+/* Sembunyikan scrollbar bawaan yang jelek untuk container horizontal (seperti kategori artikel) */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
-.dark-section h1, 
-.dark-section h2, 
-.dark-section h3, 
-.dark-section h4, 
-.dark-section p {
-  @apply text-white;
-}
-
-.dark-section .text-muted {
-  @apply text-slate-300;
-}
-
-/* ✨ MICRO-ANIMATIONS 
-*/
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -141,14 +164,17 @@
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom Scrollbar (Optional - agar tidak kaku) */
+/* Custom Scrollbar Global (Sangat Tipis & Elegan) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300;
+  @apply bg-slate-200 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-300;
 }
