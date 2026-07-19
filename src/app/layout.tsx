@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import "./globals.css";
+// [UPDATE FIX]: Menggunakan alias @ agar VS Code tidak bingung
+import "@/app/globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 // Konfigurasi Font
@@ -12,17 +13,17 @@ const fontSans = Plus_Jakarta_Sans({
 
 // Konfigurasi Metadata Lengkap (Termasuk Ikon & PWA)
 export const metadata: Metadata = {
-  title: "SAESTU - Deteksi Dini Stunting",
-  description: "Sistem AI untuk deteksi Weight Faltering dan rekomendasi nutrisi.",
+  title: "SAESTU - Deteksi Dini Stunting & AI Gizi",
+  description: "Sistem Informasi Posyandu Terpadu dan AI Deteksi Weight Faltering.",
   manifest: "/manifest.json",
   themeColor: "#0d9488",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   
   // Suntikkan Ikon ke Metadata
   icons: {
-    icon: "/icons/icon-192x192.png", // Ikon standar browser
+    icon: "/icons/icon-192x192.png", 
     shortcut: "/icons/icon-192x192.png",
-    apple: "/icons/icon-192x192.png", // Ikon untuk iOS/Apple
+    apple: "/icons/icon-192x192.png", 
   },
 
   // Pengaturan khusus untuk Apple Web App (iOS)
@@ -39,13 +40,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" className="scroll-smooth">
       <head>
-        {/* Suntikan manual link ikon sebagai fallback tambahan */}
         <link rel="icon" href="/icons/icon-192x192.png" sizes="any" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        
-        {/* Pengaturan Meta PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="mobile-web-app-capable" content="yes" />

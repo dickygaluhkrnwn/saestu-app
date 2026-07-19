@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { Activity, AlertCircle, ShieldCheck, ChevronLeft } from "lucide-react";
+import { Activity, AlertTriangle, Fingerprint, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-// UI Components
+// [NEW IMPORT]: Ambil AuthContext untuk mengecek apakah user sudah login
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -18,6 +19,19 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // [NEW LOGIC]: Cek status login saat ini
+  const { userProfile, loading: authLoading } = useAuth();
+
+  // [NEW EFFECT]: Auto-Redirect jika user sebenarnya sudah login
+  useEffect(() => {
+    if (!authLoading && userProfile) {
+        if (userProfile.role === "master") router.push("/master");
+        else if (userProfile.role === "puskesmas") router.push("/puskesmas");
+        else if (userProfile.role === "kader") router.push("/posyandu");
+        else if (userProfile.role === "parent") router.push("/parent");
+    }
+  }, [userProfile, authLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,148 +48,136 @@ export default function LoginPage() {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        const userData = docSnap.data();
-        const role = userData.role;
+        const role = docSnap.data().role;
 
-        // 3. Arahkan sesuai jabatan (Role Routing)
-        if (role === "master") {
-          router.push("/master");
-        } else if (role === "puskesmas") { 
-          router.push("/puskesmas");
-        } else if (role === "kader") {
-          router.push("/posyandu");
-        } else if (role === "parent") { // <-- LOGIKA ROUTING ORANG TUA
-          router.push("/parent");
-        } else {
-          router.push("/"); // Default fallback
-        }
+        // 3. Arahkan sesuai jabatan (Smart Role Routing)
+        if (role === "master") router.push("/master");
+        else if (role === "puskesmas") router.push("/puskesmas");
+        else if (role === "kader") router.push("/posyandu");
+        else if (role === "parent") router.push("/parent");
+        else router.push("/"); 
       } else {
         setError("Akun valid, tapi data profil tidak ditemukan.");
-        router.push("/");
       }
 
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
-        setError("Email atau password salah.");
+        setError("Email atau kata sandi yang Anda masukkan salah.");
       } else {
-        setError("Terjadi kesalahan sistem. Coba lagi.");
+        setError("Terjadi kesalahan pada sistem. Silakan coba lagi.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex">
-      
-      {/* --- LEFT SIDE (Illustration / Brand) - Hidden on Mobile --- */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-teal-600 to-blue-700 relative overflow-hidden items-center justify-center p-12 text-white">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('/pattern.svg')] opacity-10"></div>
-        
-        {/* Abstract Shapes */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
+  // Jika sistem masih mengecek status sesi (loading awal buka web)
+  // Tampilkan layar loading polos agar form login tidak berkedip
+  if (authLoading || userProfile) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+         <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
+      </div>
+    );
+  }
 
-        <div className="relative z-10 max-w-lg space-y-8">
-           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/20">
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col relative max-w-md mx-auto shadow-2xl">
+      
+      {/* 1. TOP HEADER BRANDING (NATIVE APP STYLE) */}
+      <div className="h-[35vh] bg-gradient-to-br from-emerald-500 to-teal-700 relative overflow-hidden rounded-b-[2.5rem] flex flex-col items-center justify-center px-6 text-white shrink-0">
+        
+        {/* Dekorasi Latar Belakang */}
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-teal-300/20 rounded-full blur-2xl"></div>
+
+        <div className="relative z-10 flex flex-col items-center text-center -mt-4">
+           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/20 mb-4">
               <Activity className="h-8 w-8 text-white" />
            </div>
-           
-           <div className="space-y-4">
-              <h1 className="text-5xl font-bold tracking-tight leading-tight">
-                 Masa Depan Sehat <br/> Dimulai Sejak Dini
-              </h1>
-              <p className="text-lg text-teal-100 leading-relaxed opacity-90">
-                 Sistem pemantauan tumbuh kembang anak berbasis digital untuk mendeteksi stunting lebih awal dan memberikan intervensi yang tepat sasaran.
-              </p>
-           </div>
-
-           {/* Testimonial / Quote Card */}
-           <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl">
-              <div className="flex items-center gap-3 mb-3">
-                 <ShieldCheck className="w-5 h-5 text-emerald-300" />
-                 <span className="text-sm font-bold uppercase tracking-wider text-emerald-200">Trusted System</span>
-              </div>
-              <p className="text-sm italic opacity-80">
-                 "Data yang akurat adalah kunci utama dalam penanganan stunting. SAESTU hadir untuk memastikan setiap anak terpantau dengan baik."
-              </p>
-           </div>
+           <h1 className="text-3xl font-black tracking-tight leading-none mb-1">
+              SAESTU
+           </h1>
+           <p className="text-teal-100 text-sm font-medium tracking-wide">
+              Sistem Digital Posyandu Terpadu
+           </p>
         </div>
       </div>
 
-      {/* --- RIGHT SIDE (Login Form) --- */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center p-6 sm:p-12 xl:p-24 relative bg-white">
-        
-        {/* Back Button (Mobile) */}
-        <div className="absolute top-6 left-6 lg:hidden">
-           <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-slate-100 inline-flex items-center text-slate-500">
-              <ChevronLeft className="w-5 h-5 mr-1" /> Kembali
-           </Link>
+      {/* 2. OVERLAPPING FORM CARD */}
+      <div className="flex-1 px-4 sm:px-6 -mt-12 relative z-20">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 p-6 sm:p-8 border border-slate-100">
+            
+            <div className="mb-8">
+               <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selamat Datang!</h2>
+               <p className="text-sm text-slate-500 mt-1 font-medium">Masuk untuk melanjutkan akses Anda.</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-6">
+               <div className="space-y-4">
+                  
+                  {/* Field Email */}
+                  <div>
+                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email</label>
+                     <Input 
+                        type="email" 
+                        placeholder="Masukkan alamat email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-14 bg-slate-50 border-slate-200 focus:bg-white text-sm rounded-2xl"
+                     />
+                  </div>
+
+                  {/* Field Password */}
+                  <div>
+                     <div className="flex justify-between items-center mb-2 ml-1">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Kata Sandi</label>
+                     </div>
+                     <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-14 bg-slate-50 border-slate-200 focus:bg-white text-sm tracking-widest rounded-2xl"
+                     />
+                  </div>
+               </div>
+
+               {/* Pesan Error Cerdas */}
+               {error && (
+                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-xs flex items-start gap-3 animate-in slide-in-from-top-2">
+                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                     <span className="font-bold leading-relaxed">{error}</span>
+                  </div>
+               )}
+
+               {/* Tombol Login */}
+               <Button 
+                  type="submit" 
+                  className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-base shadow-lg shadow-slate-900/20 mt-2 flex items-center justify-center gap-2 transition-all active:scale-95" 
+                  disabled={loading}
+               >
+                  {loading ? (
+                     <Activity className="w-5 h-5 animate-spin" />
+                  ) : (
+                     <>
+                        <Fingerprint className="w-5 h-5" />
+                        Masuk Aplikasi
+                     </>
+                  )}
+               </Button>
+            </form>
+
         </div>
 
-        <div className="w-full max-w-sm mx-auto space-y-8">
-           
-           <div className="space-y-2 text-center lg:text-left">
-              <div className="inline-flex lg:hidden items-center justify-center w-12 h-12 rounded-xl bg-teal-50 text-teal-600 mb-4">
-                 <Activity className="w-6 h-6" />
-              </div>
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Selamat Datang</h2>
-              <p className="text-slate-500">Masuk ke akun Anda untuk melanjutkan.</p>
-           </div>
-
-           <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-4">
-                 <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700">Email</label>
-                    <Input 
-                       type="email" 
-                       placeholder="nama@email.com" 
-                       value={email}
-                       onChange={(e) => setEmail(e.target.value)}
-                       required
-                       className="h-12 bg-slate-50 border-slate-200 focus:bg-white"
-                    />
-                 </div>
-                 <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                       <label className="text-sm font-semibold text-slate-700">Password</label>
-                       <Link href="#" className="text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline">
-                          Lupa password?
-                       </Link>
-                    </div>
-                    <Input 
-                       type="password" 
-                       placeholder="••••••••" 
-                       value={password}
-                       onChange={(e) => setPassword(e.target.value)}
-                       required
-                       className="h-12 bg-slate-50 border-slate-200 focus:bg-white"
-                    />
-                 </div>
-              </div>
-
-              {error && (
-                 <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm flex items-start gap-3 animate-fade-in">
-                    <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-                    <span className="font-medium">{error}</span>
-                 </div>
-              )}
-
-              <Button 
-                 type="submit" 
-                 className="w-full h-12 text-base font-bold shadow-lg shadow-teal-500/20" 
-                 isLoading={loading}
-              >
-                 Masuk Aplikasi
-              </Button>
-           </form>
-
-           <div className="pt-6 text-center">
-              <p className="text-xs text-slate-400">
-                 Belum punya akun? <span className="font-medium text-slate-600">Hubungi Admin Posyandu</span>
-              </p>
-           </div>
+        {/* 3. BANTUAN / FOOTER BAWAH */}
+        <div className="mt-8 text-center pb-8">
+           <Link href="/" className="inline-flex items-center gap-1 text-xs font-bold text-teal-600 hover:text-teal-700 bg-teal-50 px-4 py-2 rounded-full transition-colors">
+              <span className="text-slate-500 font-medium">Lupa Kata Sandi?</span> Hubungi Admin <ChevronRight className="w-3 h-3" />
+           </Link>
         </div>
 
       </div>
