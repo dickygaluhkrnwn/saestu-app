@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 import { Child } from "@/types/schema";
 import { addMeasurement } from "@/lib/services/measurements";
 import { 
-  ArrowLeft, Save, Calendar, Weight, Ruler, Activity, Camera, X, RefreshCw, Brain, ScanLine
+  ArrowLeft, Save, Calendar, Weight, Ruler, Camera, X, RefreshCw, Brain, ScanLine, AlertCircle
 } from "lucide-react";
 
 // UI Components
@@ -202,102 +202,124 @@ function MeasurementForm() {
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Memuat Data...</p>
+        <div className="w-12 h-12 border-4 border-teal-100 rounded-full relative">
+           <div className="absolute inset-[-4px] border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest animate-pulse">Menyiapkan Formulir</p>
       </div>
     </div>
   );
 
-  if (!child) return <div className="p-8 text-center">Data tidak ditemukan.</div>;
+  if (!child) return <div className="p-8 text-center font-bold text-slate-500">Data anak tidak ditemukan.</div>;
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 font-sans relative flex flex-col">
+    <div className="min-h-screen bg-slate-50 font-sans relative flex flex-col pb-28 md:pb-8">
+        
         {/* --- HEADER --- */}
-        <div className="flex items-center gap-4 bg-white p-4 sticky top-0 z-20 shadow-sm border-b border-slate-100">
-            <button onClick={() => router.back()} className="p-2.5 rounded-2xl bg-slate-50 text-slate-600 active:bg-teal-50 transition-all">
-                <ArrowLeft className="h-6 w-6" />
-            </button>
-            <div className="flex-1">
-                <h1 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Input Pengukuran</h1>
-                <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="neutral" className="bg-teal-50 text-teal-700 border-0 text-[9px] font-bold uppercase py-0.5">{child.name}</Badge>
+        <div className="flex items-center gap-4 bg-white/90 backdrop-blur-xl p-4 md:px-8 sticky top-0 z-20 shadow-sm border-b border-slate-200/60">
+            <div className="max-w-4xl mx-auto w-full flex items-center gap-4">
+                <button onClick={() => router.back()} className="p-2.5 rounded-2xl bg-slate-50 text-slate-600 active:bg-teal-50 transition-all border border-slate-100">
+                    <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div className="flex-1">
+                    <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">Input Pengukuran</h1>
+                    <div className="flex items-center gap-2 mt-1.5">
+                        <Badge variant="neutral" className="bg-teal-50 text-teal-700 border-0 text-[10px] font-black uppercase tracking-widest py-0.5">{child.name}</Badge>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div className="flex-1 p-4 md:p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
-                <form id="measurement-form" onSubmit={handleSubmit} className="space-y-6 pb-24 md:pb-0">
+            <div className="max-w-3xl mx-auto space-y-6">
+                
+                {/* Banner Edukasi */}
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
+                   <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                   <div>
+                      <p className="text-sm font-bold text-blue-900">Petunjuk Pengukuran</p>
+                      <p className="text-[11px] text-blue-700/80 font-medium leading-relaxed mt-1">Pastikan timbangan di angka 0.00 sebelum balita naik. Lepas alas kaki dan pakaian tebal balita untuk hasil deteksi AI yang akurat.</p>
+                   </div>
+                </div>
+
+                <form id="measurement-form" onSubmit={handleSubmit} className="space-y-6">
                     
                     {/* --- TANGGAL --- */}
-                    <Card className="p-5 border-slate-100 shadow-sm rounded-3xl">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-3">
+                    <Card className="p-6 border-slate-100 shadow-sm rounded-3xl bg-white">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-3">
                             <Calendar className="w-4 h-4 text-teal-600" />
-                            Tanggal Kunjungan
+                            Tanggal Kunjungan Posyandu
                         </label>
                         <Input 
                             type="date" 
                             required
                             value={formData.date}
                             onChange={(e) => setFormData({...formData, date: e.target.value})}
-                            className="h-14 text-lg bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-teal-500/20 transition-all font-semibold"
+                            className="h-14 text-base bg-slate-50 border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all font-bold text-slate-800"
                         />
                     </Card>
 
                     {/* --- INPUT BB & TB (GRID) --- */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
                         {/* BERAT BADAN */}
-                        <Card className="bg-white border-slate-100 shadow-sm rounded-3xl overflow-hidden p-0">
-                            <div className="p-5 space-y-4">
-                                <label className="text-xs font-bold text-blue-700 uppercase tracking-widest flex justify-between items-center">
-                                    <span className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600"><Weight className="w-4 h-4" /></div>
-                                      Berat (BB)
-                                    </span>
-                                    <button type="button" onClick={() => openCamera('weight')} disabled={isProcessingImage} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg shadow-blue-200 transition-all active:scale-95">
-                                      <ScanLine className="w-3.5 h-3.5" /> <span className="text-[10px] font-bold">SCAN</span>
+                        <Card className="bg-white border-slate-100 shadow-sm rounded-3xl overflow-hidden p-0 hover:border-blue-200 transition-colors">
+                            <div className="p-6 space-y-5">
+                                <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600"><Weight className="w-5 h-5" /></div>
+                                      <label className="text-sm font-black text-blue-700 uppercase tracking-widest">
+                                          Berat (BB)
+                                      </label>
+                                    </div>
+                                    <button type="button" onClick={() => openCamera('weight')} disabled={isProcessingImage} className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl flex items-center gap-2 shadow-md transition-all active:scale-95">
+                                      <ScanLine className="w-4 h-4 text-blue-400" /> <span className="text-[10px] font-black uppercase tracking-wider">Scan Angka</span>
                                     </button>
-                                </label>
+                                </div>
+                                
                                 <div className="relative">
                                     <Input 
                                         type="number" step="0.01" placeholder="0.00" required
                                         value={formData.weight}
                                         onChange={(e) => setFormData({...formData, weight: e.target.value})}
-                                        className="pr-12 text-2xl font-extrabold h-16 bg-slate-50 border-0 rounded-2xl text-slate-800 focus:ring-2 focus:ring-blue-500/20"
+                                        className="pr-16 pl-6 text-3xl font-black h-20 bg-slate-50 border-slate-200 rounded-2xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
                                     />
-                                    <Badge variant="neutral" className="absolute right-4 top-1/2 -translate-y-1/2 font-bold bg-white border-0 shadow-sm">kg</Badge>
+                                    <Badge variant="neutral" className="absolute right-4 top-1/2 -translate-y-1/2 font-black bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-lg shadow-sm">kg</Badge>
                                 </div>
                             </div>
                         </Card>
 
                         {/* TINGGI BADAN */}
-                        <Card className="bg-white border-slate-100 shadow-sm rounded-3xl overflow-hidden p-0">
-                            <div className="p-5 space-y-4">
-                                <label className="text-xs font-bold text-pink-700 uppercase tracking-widest flex justify-between items-center">
-                                    <span className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-pink-50 rounded-lg text-pink-600"><Ruler className="w-4 h-4" /></div>
-                                      Tinggi (TB)
-                                    </span>
-                                    <button type="button" onClick={() => openCamera('height')} disabled={isProcessingImage} className="bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg shadow-pink-200 transition-all active:scale-95">
-                                      <ScanLine className="w-3.5 h-3.5" /> <span className="text-[10px] font-bold">SCAN</span>
+                        <Card className="bg-white border-slate-100 shadow-sm rounded-3xl overflow-hidden p-0 hover:border-pink-200 transition-colors">
+                            <div className="p-6 space-y-5">
+                                <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2.5 bg-pink-50 rounded-xl text-pink-600"><Ruler className="w-5 h-5" /></div>
+                                      <label className="text-sm font-black text-pink-700 uppercase tracking-widest">
+                                          Tinggi (TB)
+                                      </label>
+                                    </div>
+                                    <button type="button" onClick={() => openCamera('height')} disabled={isProcessingImage} className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl flex items-center gap-2 shadow-md transition-all active:scale-95">
+                                      <ScanLine className="w-4 h-4 text-pink-400" /> <span className="text-[10px] font-black uppercase tracking-wider">Scan Angka</span>
                                     </button>
-                                </label>
+                                </div>
+
                                 <div className="relative">
                                     <Input 
                                         type="number" step="0.1" placeholder="0.0" required
                                         value={formData.height}
                                         onChange={(e) => setFormData({...formData, height: e.target.value})}
-                                        className="pr-12 text-2xl font-extrabold h-16 bg-slate-50 border-0 rounded-2xl text-slate-800 focus:ring-2 focus:ring-pink-500/20"
+                                        className="pr-16 pl-6 text-3xl font-black h-20 bg-slate-50 border-slate-200 rounded-2xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-pink-500/20"
                                     />
-                                    <Badge variant="neutral" className="absolute right-4 top-1/2 -translate-y-1/2 font-bold bg-white border-0 shadow-sm">cm</Badge>
+                                    <Badge variant="neutral" className="absolute right-4 top-1/2 -translate-y-1/2 font-black bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-lg shadow-sm">cm</Badge>
                                 </div>
                             </div>
                         </Card>
                     </div>
 
                     {/* --- LINGKAR KEPALA --- */}
-                    <Card className="bg-white border-slate-100 shadow-sm rounded-3xl p-5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                    <Card className="bg-white border-slate-100 shadow-sm rounded-3xl p-6">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-3">
                             <Brain className="w-4 h-4 text-purple-500" />
                             Lingkar Kepala (Opsional)
                         </label>
@@ -306,39 +328,51 @@ function MeasurementForm() {
                                 type="number" step="0.1" placeholder="0.0"
                                 value={formData.headCircumference}
                                 onChange={(e) => setFormData({...formData, headCircumference: e.target.value})}
-                                className="pr-12 h-14 text-xl font-bold bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-purple-500/10"
+                                className="pr-16 pl-6 h-16 text-xl font-black bg-slate-50 border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-purple-500/20 text-slate-800"
                             />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-300">CM</span>
+                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">CM</span>
                         </div>
                     </Card>
+
+                    {/* --- DESKTOP SUBMIT BUTTON --- */}
+                    <div className="hidden md:flex justify-end pt-4">
+                        <Button 
+                            type="submit" 
+                            className="h-16 px-10 text-lg font-black shadow-xl shadow-teal-500/30 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl transition-all active:scale-95" 
+                            isLoading={isSubmitting}
+                        >
+                            <Save className="mr-2 h-6 w-6" />
+                            Simpan & Hitung Z-Score
+                        </Button>
+                    </div>
                 </form>
             </div>
         </div>
 
-        {/* --- STICKY ACTION BUTTON (FIXED FOR MOBILE) --- */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-30 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        {/* --- STICKY ACTION BUTTON (FIXED FOR MOBILE ONLY) --- */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t border-slate-200/50 z-30 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
             <div className="max-w-2xl mx-auto">
                 <Button 
                     type="submit" 
                     form="measurement-form"
-                    className="w-full h-14 md:h-16 text-lg font-bold shadow-2xl shadow-teal-500/30 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl md:rounded-3xl transition-all active:scale-[0.97]" 
+                    className="w-full h-14 text-base font-black shadow-xl shadow-teal-500/30 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl transition-all active:scale-[0.97]" 
                     isLoading={isSubmitting}
                 >
-                    <Save className="mr-2 h-6 w-6" />
-                    Simpan & Analisis AI
+                    <Save className="mr-2 h-5 w-5" />
+                    Simpan & Analisis
                 </Button>
             </div>
         </div>
 
-        {/* --- CAMERA OVERLAY --- */}
+        {/* --- CAMERA OVERLAY (NATIVE SCANNER STYLE) --- */}
         {isCameraOpen && (
           <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-300">
              <div className="p-6 pt-12 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent absolute top-0 w-full z-10">
                 <div className="text-white">
-                   <p className="text-[10px] font-bold text-teal-400 uppercase tracking-[0.2em] mb-1 text-shadow-sm">Smart Vision AI</p>
-                   <p className="text-lg font-bold">Membaca Angka {scanTarget === 'weight' ? 'BB' : 'TB'}</p>
+                   <p className="text-[10px] font-black text-teal-400 uppercase tracking-[0.2em] mb-1 text-shadow-sm flex items-center gap-1.5"><Brain className="w-3 h-3" /> AI Vision Scanner</p>
+                   <p className="text-xl font-black">Arahkan ke Angka {scanTarget === 'weight' ? 'Timbangan' : 'Alat Ukur Tinggi'}</p>
                 </div>
-                <button onClick={closeCamera} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white backdrop-blur-md transition-all active:scale-90">
+                <button onClick={closeCamera} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white backdrop-blur-md transition-all active:scale-90 border border-white/20">
                    <X className="w-6 h-6" />
                 </button>
              </div>
@@ -352,28 +386,29 @@ function MeasurementForm() {
                 />
                 
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                   <div className="w-72 h-32 border-2 border-teal-400/80 rounded-3xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
-                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-teal-400 rounded-tl-xl"></div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-teal-400 rounded-tr-xl"></div>
-                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-teal-400 rounded-bl-xl"></div>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-teal-400 rounded-br-xl"></div>
+                   <div className="w-72 h-32 border-2 border-teal-400/80 rounded-[2rem] relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                      <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-teal-400 rounded-tl-[2rem]"></div>
+                      <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-teal-400 rounded-tr-[2rem]"></div>
+                      <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-teal-400 rounded-bl-[2rem]"></div>
+                      <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-teal-400 rounded-br-[2rem]"></div>
                       
-                      <div className="absolute top-0 left-0 w-full h-1 bg-teal-400/40 animate-scan-line"></div>
+                      {/* Animasi Garis Scanner */}
+                      <div className="absolute top-0 left-0 w-full h-1 bg-teal-400 shadow-[0_0_8px_2px_rgba(45,212,191,0.8)] animate-scan-line"></div>
 
-                      <p className="absolute -bottom-10 w-full text-center text-white text-xs font-bold bg-teal-600/80 py-1 px-3 rounded-full shadow-lg backdrop-blur-md">
-                         Posisikan angka di tengah kotak
+                      <p className="absolute -bottom-12 w-full text-center text-white text-xs font-bold bg-slate-900/80 py-2 px-4 rounded-full shadow-lg backdrop-blur-md">
+                         Posisikan angka digital di dalam kotak
                       </p>
                    </div>
                 </div>
              </div>
 
-             <div className="p-10 pb-16 bg-black flex justify-center items-center">
+             <div className="p-10 pb-16 bg-black flex justify-center items-center relative">
                 <button 
                   onClick={captureAndScan}
-                  className="w-20 h-20 rounded-full border-8 border-white/20 flex items-center justify-center hover:scale-110 transition-all active:scale-95"
+                  className="w-20 h-20 rounded-full border-[6px] border-white/30 flex items-center justify-center hover:scale-110 transition-all active:scale-95"
                 >
-                   <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl shadow-white/30">
-                     <Camera className="w-7 h-7 text-teal-900" />
+                   <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl shadow-white/50">
+                     <Camera className="w-6 h-6 text-slate-900" />
                    </div>
                 </button>
              </div>
@@ -384,17 +419,19 @@ function MeasurementForm() {
 
         {/* --- AI PROCESSING OVERLAY --- */}
         {isProcessingImage && (
-          <div className="fixed inset-0 z-[110] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
+          <div className="fixed inset-0 z-[110] bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
              <div className="relative">
-                <div className="w-20 h-20 bg-teal-50 rounded-[2rem] flex items-center justify-center mb-6">
-                    <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
+                <div className="w-24 h-24 bg-teal-50 rounded-[2.5rem] flex items-center justify-center mb-8 border border-teal-100 shadow-inner">
+                    <RefreshCw className="w-10 h-10 text-teal-600 animate-spin" />
                 </div>
-                <div className="absolute -top-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-full animate-bounce">
-                    <Brain className="w-3.5 h-3.5" />
+                <div className="absolute -top-2 -right-2 bg-slate-900 text-teal-400 p-2 rounded-full animate-bounce shadow-lg">
+                    <Brain className="w-5 h-5" />
                 </div>
              </div>
-             <h3 className="text-xl font-black text-slate-900 tracking-tight">Menganalisis Angka</h3>
-             <p className="text-slate-500 text-xs mt-1 font-medium italic">Gemini AI sedang membaca foto Anda...</p>
+             <h3 className="text-2xl font-black text-slate-900 tracking-tight">Menganalisis Angka</h3>
+             <p className="text-slate-500 text-sm mt-2 font-bold flex items-center gap-2">
+                Gemini AI Vision sedang bekerja <span className="flex gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{animationDelay: '0ms'}}></span><span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{animationDelay: '150ms'}}></span><span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{animationDelay: '300ms'}}></span></span>
+             </p>
           </div>
         )}
 

@@ -1,0 +1,41 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Utensils, Building2, Users, UserCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export function PuskesmasBottomNav() {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: "/puskesmas", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/puskesmas/posyandu", label: "Posyandu", icon: Building2 },
+    { href: "/puskesmas/nutrition", label: "Gizi", icon: Utensils },
+    { href: "/puskesmas/kaders", label: "Kader", icon: Users },
+    { href: "/puskesmas/profile", label: "Profil", icon: UserCircle },
+  ];
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none print:hidden">
+      <nav className="w-full bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-2 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex justify-between items-center pointer-events-auto shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
+        {menuItems.map((item) => {
+          const isActive = item.href === "/puskesmas" 
+            ? pathname === "/puskesmas" 
+            : pathname.startsWith(item.href);
+          
+          return (
+            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 group relative transition-all duration-300 w-16">
+              <div className={cn("p-1.5 rounded-xl transition-all duration-300", isActive ? "bg-emerald-100/50 text-emerald-600" : "text-slate-400 hover:text-slate-500")}>
+                <item.icon className={cn("w-5 h-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
+              </div>
+              <span className={cn("text-[9px] font-bold transition-colors duration-300", isActive ? "text-emerald-700" : "text-slate-400")}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}

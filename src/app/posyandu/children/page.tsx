@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { 
@@ -11,8 +11,11 @@ import {
   Filter,
   Calendar,
   User as UserIcon,
+  Users, // [FIX]: Tambahkan Users di sini
   MapPin,
-  Scale
+  Scale,
+  ArrowUpDown,
+  AlertTriangle
 } from "lucide-react";
 
 // UI Components
@@ -42,7 +45,12 @@ export default function ChildrenPage() {
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Filter & Search State
   const [searchTerm, setSearchTerm] = useState("");
+  const [genderFilter, setGenderFilter] = useState<"all" | "L" | "P">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "normal" | "waspada">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "nameAsc" | "ageAsc">("newest");
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
@@ -57,16 +65,9 @@ export default function ChildrenPage() {
 
   // Form State
   const [formData, setFormData] = useState<CreateChildInput>({
-    name: "",
-    nik: "",
-    gender: "L",
-    pob: "",
-    dob: "",
-    parentName: "",
-    parentId: "",
-    posyanduId: "",
-    initialWeight: 0,
-    initialHeight: 0,
+    name: "", nik: "", gender: "L", pob: "", dob: "",
+    parentName: "", parentId: "", posyanduId: "",
+    initialWeight: 0, initialHeight: 0,
   });
 
   const fetchData = async () => {
@@ -97,7 +98,6 @@ export default function ChildrenPage() {
     setIsSubmitting(true);
     try {
       let parentName = formData.parentName;
-      // Jika parentId dipilih, ambil nama dari daftar parents
       if (formData.parentId) {
         const selectedParent = parents.find(p => p.uid === formData.parentId);
         if (selectedParent) parentName = selectedParent.name;
@@ -112,7 +112,7 @@ export default function ChildrenPage() {
       await fetchData();
       setIsModalOpen(false);
       resetForm();
-      showToast("Data Anak berhasil ditambahkan! 🎉", "success");
+      showToast("Data Balita berhasil ditambahkan! 🎉", "success");
     } catch (err) {
       showToast("Gagal menambah data anak.", "error");
     } finally {
@@ -128,154 +128,236 @@ export default function ChildrenPage() {
     });
   };
 
-  const filteredChildren = children.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.nik.includes(searchTerm)
-  );
+  // -------------------------------------------------------------
+  // LOGIKA SMART FILTERING & SORTING (ENTERPRISE)
+  // -------------------------------------------------------------
+  const processedChildren = useMemo(() => {
+    let result = [...children];
+
+    // 1. Search Filter
+    if (searchTerm) {
+        result = result.filter(c => 
+          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.nik.includes(searchTerm)
+        );
+    }
+
+    // 2. Gender Filter
+    if (genderFilter !== "all") {
+        result = result.filter(c => c.gender === genderFilter);
+    }
+
+    // 3. Status Filter
+    if (statusFilter !== "all") {
+        result = result.filter(c => {
+           const isWaspada = c.lastWeightStatus === 'inadequate' || c.lastLengthStatus === 'inadequate';
+           return statusFilter === "waspada" ? isWaspada : !isWaspada;
+        });
+    }
+
+    // 4. Sort Filter
+    if (sortBy === "nameAsc") {
+        result.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "ageAsc") {
+        result.sort((a, b) => {
+           const ageA = calculateAgeInMonths(a.dob instanceof Date ? a.dob : (a.dob as any).toDate());
+           const ageB = calculateAgeInMonths(b.dob instanceof Date ? b.dob : (b.dob as any).toDate());
+           return ageA - ageB;
+        });
+    }
+
+    return result;
+  }, [children, searchTerm, genderFilter, statusFilter, sortBy]);
+
 
   return (
-    <div className="p-4 md:p-6 space-y-6 font-sans pb-24">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 font-sans pb-28 max-w-4xl mx-auto">
       
-      {/* --- MODERN HERO HEADER --- */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-teal-600 to-teal-500 p-6 md:p-8 shadow-xl shadow-teal-900/5 overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-           <Baby className="w-48 h-48 text-white transform translate-x-10 -translate-y-10" />
+      {/* 1. COMPACT HERO SECTION */}
+      <div className="relative rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 sm:p-8 shadow-lg shadow-teal-500/20 overflow-hidden">
+        
+        <div className="absolute top-[-20%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-4 right-4 opacity-20 pointer-events-none">
+           <Baby className="w-32 h-32 text-white transform rotate-12" />
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-           <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
-                 <MapPin className="w-3.5 h-3.5" />
-                 <span>Data Wilayah Terkini</span>
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+           <div className="space-y-2 w-full">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white text-[10px] font-black uppercase tracking-widest">
+                 <MapPin className="w-3 h-3" /> Data Wilayah
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Data Balita</h1>
-              <p className="text-teal-50 text-sm md:text-base max-w-lg leading-relaxed opacity-90">
-                 Kelola data tumbuh kembang anak secara digital, akurat, dan terintegrasi untuk generasi sehat.
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none">Manajemen Balita</h1>
+              <p className="text-teal-50 text-xs sm:text-sm max-w-md leading-relaxed font-medium">
+                 Kelola data tumbuh kembang anak secara digital, akurat, dan terintegrasi untuk generasi bebas stunting.
               </p>
            </div>
 
-           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              {/* Stat Badge */}
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex-1 md:flex-none">
+           <div className="flex flex-row sm:flex-col gap-3 w-full sm:w-auto shrink-0">
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex-1 sm:flex-none">
                  <div className="bg-white/20 p-2 rounded-xl text-white">
-                    <UserIcon className="w-5 h-5" />
+                    <Users className="w-5 h-5" />
                  </div>
                  <div>
-                    <p className="text-xs text-teal-100 font-medium">Total Anak</p>
-                    <p className="text-xl font-bold text-white">{children.length}</p>
+                    <p className="text-[10px] text-teal-100 font-bold uppercase tracking-widest">Total Anak</p>
+                    <p className="text-xl font-black text-white leading-none mt-0.5">{children.length}</p>
                  </div>
               </div>
 
               <Button 
-                 className="h-auto py-3 px-6 bg-white text-teal-700 hover:bg-teal-50 hover:scale-105 active:scale-95 border-0 shadow-lg font-bold transition-all"
+                 className="h-auto py-3 bg-white text-teal-700 hover:bg-teal-50 active:scale-95 border-0 shadow-lg font-black transition-transform flex-1 sm:flex-none rounded-xl"
                  onClick={() => setIsModalOpen(true)}
               >
-                 <Plus className="h-5 w-5 mr-2" />
-                 Anak Baru
+                 <Plus className="h-5 w-5 mr-1" />
+                 Balita Baru
               </Button>
            </div>
         </div>
       </div>
 
-      {/* --- SEARCH BAR --- */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md py-2 -mx-2 px-2">
-        <div className="relative shadow-sm rounded-2xl group focus-within:shadow-md transition-shadow">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-400">
-            <Search className="h-5 w-5 group-focus-within:text-primary transition-colors" />
+      {/* 2. STICKY TOOLS SECTION (SEARCH & FILTER) */}
+      <div className="sticky top-[60px] md:top-0 z-20 bg-slate-50/90 backdrop-blur-xl py-3 -mx-4 px-4 sm:mx-0 sm:px-0 space-y-3 shadow-sm border-b border-slate-200/50 md:border-0 md:shadow-none md:bg-transparent">
+        
+        {/* Search Bar */}
+        <div className="relative shadow-sm rounded-2xl group transition-shadow focus-within:shadow-md bg-white">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center text-slate-400 group-focus-within:text-teal-500 transition-colors">
+            <Search className="h-5 w-5" />
           </div>
           <Input 
-            placeholder="Cari nama anak atau NIK..." 
-            className="pl-10 h-12 rounded-2xl border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 transition-all text-base shadow-sm"
+            placeholder="Cari nama balita atau NIK..." 
+            className="pl-12 h-14 rounded-2xl border-slate-200 bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all font-medium text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {/* Filter Icon Visual */}
-          <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
-             <Filter className="h-4 w-4" />
-          </button>
+        </div>
+
+        {/* Filter & Sort Bar (Scrollable X on Mobile) */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-500 shrink-0 hover:bg-slate-50 transition-colors">
+               <ArrowUpDown className="w-4 h-4" />
+               <select 
+                  className="bg-transparent text-xs font-bold outline-none cursor-pointer appearance-none pr-4"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+               >
+                  <option value="newest">Terbaru</option>
+                  <option value="nameAsc">A - Z</option>
+                  <option value="ageAsc">Usia Termuda</option>
+               </select>
+            </div>
+            
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-500 shrink-0 hover:bg-slate-50 transition-colors">
+               <Filter className="w-4 h-4" />
+               <select 
+                  className="bg-transparent text-xs font-bold outline-none cursor-pointer appearance-none pr-4"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+               >
+                  <option value="all">Semua Status</option>
+                  <option value="waspada">⚠️ Waspada / Pantau</option>
+                  <option value="normal">✅ Normal</option>
+               </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-500 shrink-0 hover:bg-slate-50 transition-colors">
+               <Baby className="w-4 h-4" />
+               <select 
+                  className="bg-transparent text-xs font-bold outline-none cursor-pointer appearance-none pr-4"
+                  value={genderFilter}
+                  onChange={(e) => setGenderFilter(e.target.value as any)}
+               >
+                  <option value="all">Semua Gender</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+               </select>
+            </div>
+
+            {/* Total Results Badge */}
+            <div className="ml-auto bg-teal-50 text-teal-600 px-3 py-2 rounded-xl text-xs font-black border border-teal-100 shrink-0">
+                {processedChildren.length} Hasil
+            </div>
         </div>
       </div>
 
-      {/* --- LIST CONTENT --- */}
+      {/* 3. LIST CONTENT */}
       <div className="space-y-3">
         {loading ? (
-          // SKELETON LOADER (Modern)
+          // SKELETON LOADER
           [1, 2, 3].map((i) => (
-            <Card key={i} className="flex gap-4 items-center animate-pulse border-slate-100">
+            <Card key={i} className="flex gap-4 items-center animate-pulse border-slate-100 p-4 rounded-2xl">
               <div className="w-14 h-14 rounded-2xl bg-slate-100"></div>
               <div className="flex-1 space-y-3">
-                <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                <div className="h-3 bg-slate-100 rounded w-1/4"></div>
+                <div className="h-4 bg-slate-100 rounded-md w-1/3"></div>
+                <div className="h-3 bg-slate-100 rounded-md w-1/4"></div>
               </div>
             </Card>
           ))
-        ) : filteredChildren.length === 0 ? (
+        ) : processedChildren.length === 0 ? (
           // EMPTY STATE
-          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-               <Baby className="h-10 w-10 text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-3xl border border-dashed border-slate-200 text-center shadow-sm">
+            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
+               <Baby className="h-8 w-8 text-slate-300" />
             </div>
-            <h3 className="text-slate-900 font-bold text-lg">Belum ada data</h3>
-            <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">
-              Data anak yang Anda tambahkan akan muncul di sini.
+            <h3 className="text-slate-800 font-black text-lg">Pencarian Kosong</h3>
+            <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1 leading-relaxed">
+              Tidak ada balita yang cocok dengan filter atau kata kunci Anda.
             </p>
           </div>
         ) : (
-          // DATA LIST
-          filteredChildren.map((child) => {
+          // DATA LIST (CONTACT STYLE)
+          processedChildren.map((child) => {
             const age = calculateAgeInMonths(child.dob instanceof Date ? child.dob : (child.dob as any).toDate());
-            const isStunted = child.lastLengthStatus === 'inadequate';
-            const isUnderweight = child.lastWeightStatus === 'inadequate';
+            const isWaspada = child.lastLengthStatus === 'inadequate' || child.lastWeightStatus === 'inadequate';
             
             return (
               <Card 
                 key={child.id} 
-                hoverable
                 onClick={() => router.push(`/posyandu/children/${child.id}`)}
-                className="group relative cursor-pointer active:scale-[0.99] transition-all border-slate-100 hover:border-teal-200"
+                className="group relative cursor-pointer active:scale-[0.99] transition-all border-slate-100 hover:border-teal-300 rounded-2xl p-3 sm:p-4 bg-white shadow-sm"
               >
-                <div className="flex items-center gap-4 p-4">
-                  {/* Avatar Gender */}
+                <div className="flex items-center gap-4">
+                  {/* Avatar Gender (Warna dinamis L/P) */}
                   <div className={cn(
-                    "h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md transition-transform group-hover:scale-105",
-                    child.gender === 'L' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'
+                    "h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center text-lg sm:text-xl font-black text-white shadow-sm shrink-0",
+                    child.gender === 'L' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-pink-400 to-pink-500'
                   )}>
                     {child.name.charAt(0).toUpperCase()}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-slate-800 text-lg truncate group-hover:text-teal-700 transition-colors">
-                        {child.name}
-                        </h3>
-                        {(isStunted || isUnderweight) && (
-                            <Badge variant="danger" className="text-[9px] px-1.5 h-5 animate-pulse">Pantau</Badge>
+                        <div className="min-w-0">
+                           <h3 className="font-black text-slate-800 text-sm sm:text-base truncate group-hover:text-teal-700 transition-colors">
+                             {child.name}
+                           </h3>
+                           <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate mt-0.5">
+                             NIK: {child.nik || "-"}
+                           </p>
+                        </div>
+                        {/* Waspada Badge */}
+                        {isWaspada && (
+                            <Badge variant="danger" className="text-[9px] px-2 h-5 border-0 animate-pulse bg-rose-100 text-rose-700 shrink-0">
+                                <AlertTriangle className="w-3 h-3 mr-1" /> Waspada
+                            </Badge>
                         )}
                     </div>
                     
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
-                      <Badge variant="neutral" className="gap-1 font-medium bg-slate-50 border-slate-100 text-slate-500">
-                        <Calendar className="w-3 h-3 text-slate-400" />
-                        {age} Bln
-                      </Badge>
-                      <span className="flex items-center gap-1 truncate">
-                        <UserIcon className="w-3 h-3 text-slate-400" />
-                        {child.parentName}
-                      </span>
+                    {/* Meta Info Box */}
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold text-slate-600">
+                        <Calendar className="w-3 h-3 text-slate-400" /> {age} Bln
+                      </div>
+                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold text-slate-600">
+                        <Scale className="w-3 h-3 text-slate-400" /> {child.lastWeight ? `${child.lastWeight} kg` : "-"}
+                      </div>
+                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold text-slate-600 truncate max-w-[100px] sm:max-w-none">
+                        <UserIcon className="w-3 h-3 text-slate-400" /> {child.parentName || "Tanpa Ortu"}
+                      </div>
                     </div>
-
-                    <div className="flex gap-3 mt-2">
-                        <div className="flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                           <Scale className="w-3 h-3 text-slate-400" /> {child.lastWeight || "-"} kg
-                        </div>
-                     </div>
                   </div>
 
                   {/* Action Arrow */}
-                  <div className="text-slate-300 group-hover:text-teal-500 transition-colors">
-                    <ChevronRight className="h-6 w-6" />
+                  <div className="text-slate-300 group-hover:text-teal-500 transition-colors group-hover:translate-x-1 shrink-0 hidden sm:block">
+                    <ChevronRight className="h-5 w-5" />
                   </div>
                 </div>
               </Card>
@@ -284,123 +366,142 @@ export default function ChildrenPage() {
         )}
       </div>
 
-      {/* --- MODAL TAMBAH ANAK (FULL LOGIC RESTORED) --- */}
+      {/* --- MODAL TAMBAH NATIVE STYLE --- */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title="Registrasi Anak Baru"
+        title="Registrasi Balita Baru"
       >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Section: Identitas */}
+        <form onSubmit={handleSubmit} className="space-y-6 px-1 pb-1">
+          
+          {/* Section 1: Identitas Dasar */}
           <div className="space-y-4">
+             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <div className="bg-teal-50 text-teal-600 p-1.5 rounded-lg"><Baby className="w-4 h-4" /></div>
+                <h3 className="font-black text-slate-800 text-sm">Identitas Dasar</h3>
+             </div>
+
              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nama Lengkap</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nama Lengkap</label>
                 <Input 
                   required 
                   placeholder="Contoh: Budi Santoso"
-                  className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-14 rounded-2xl text-sm font-medium"
                   value={formData.name} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
                 />
              </div>
 
-             <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">NIK (Opsional)</label>
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">NIK (Opsional)</label>
                    <Input 
-                      placeholder="16 Digit"
-                      className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                      placeholder="16 Digit NIK"
+                      className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-14 rounded-2xl font-mono text-sm"
                       value={formData.nik} 
                       onChange={(e) => setFormData({...formData, nik: e.target.value})} 
                    />
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Gender</label>
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Jenis Kelamin</label>
                    <div className="relative">
                       <select 
-                        className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                        className="w-full h-14 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-4 text-sm font-bold appearance-none cursor-pointer text-slate-700"
                         value={formData.gender} 
                         onChange={(e) => setFormData({...formData, gender: e.target.value as "L"|"P"})}
                       >
                         <option value="L">Laki-laki</option>
                         <option value="P">Perempuan</option>
                       </select>
-                      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
                    </div>
                 </div>
              </div>
           </div>
 
-          <div className="h-px bg-slate-100 my-2"></div>
-
-          {/* Section: Kelahiran */}
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Tempat Lahir</label>
-                <Input 
-                   className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
-                   value={formData.pob} 
-                   onChange={(e) => setFormData({...formData, pob: e.target.value})} 
-                />
+          {/* Section 2: Kelahiran */}
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <div className="bg-blue-50 text-blue-600 p-1.5 rounded-lg"><Calendar className="w-4 h-4" /></div>
+                <h3 className="font-black text-slate-800 text-sm">Data Kelahiran</h3>
              </div>
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Tanggal Lahir</label>
-                <Input 
-                   type="date" 
-                   required 
-                   className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
-                   value={formData.dob} 
-                   onChange={(e) => setFormData({...formData, dob: e.target.value})} 
-                />
+
+             <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tempat Lahir</label>
+                   <Input 
+                      placeholder="Nama Kota"
+                      className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-14 rounded-2xl text-sm font-medium"
+                      value={formData.pob} 
+                      onChange={(e) => setFormData({...formData, pob: e.target.value})} 
+                   />
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tanggal Lahir</label>
+                   <Input 
+                      type="date" 
+                      required 
+                      className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-14 rounded-2xl text-sm font-medium text-slate-700"
+                      value={formData.dob} 
+                      onChange={(e) => setFormData({...formData, dob: e.target.value})} 
+                   />
+                </div>
+             </div>
+
+             <div className="bg-teal-50 p-4 rounded-2xl border border-teal-100 grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-teal-700 uppercase tracking-widest ml-1">Berat Lahir (kg)</label>
+                   <Input 
+                      type="number" step="0.01" required 
+                      placeholder="0.00"
+                      className="bg-white border-teal-200 text-center font-black text-lg h-14 rounded-xl focus:ring-teal-500/30"
+                      value={formData.initialWeight || ""} 
+                      onChange={(e) => setFormData({...formData, initialWeight: parseFloat(e.target.value)})} 
+                   />
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-teal-700 uppercase tracking-widest ml-1">Panjang Lahir (cm)</label>
+                   <Input 
+                      type="number" step="0.1" required 
+                      placeholder="0.0"
+                      className="bg-white border-teal-200 text-center font-black text-lg h-14 rounded-xl focus:ring-teal-500/30"
+                      value={formData.initialHeight || ""} 
+                      onChange={(e) => setFormData({...formData, initialHeight: parseFloat(e.target.value)})} 
+                   />
+                </div>
              </div>
           </div>
 
-          <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 grid grid-cols-2 gap-4">
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-teal-700 uppercase tracking-wider ml-1">Berat Lahir (kg)</label>
-                <Input 
-                   type="number" step="0.01" required 
-                   className="bg-white border-teal-200 text-center font-bold text-lg h-12 focus:ring-teal-500"
-                   value={formData.initialWeight || ""} 
-                   onChange={(e) => setFormData({...formData, initialWeight: parseFloat(e.target.value)})} 
-                />
+          {/* Section 3: Orang Tua */}
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <div className="bg-orange-50 text-orange-600 p-1.5 rounded-lg"><UserIcon className="w-4 h-4" /></div>
+                <h3 className="font-black text-slate-800 text-sm">Orang Tua / Wali</h3>
              </div>
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-teal-700 uppercase tracking-wider ml-1">Panjang (cm)</label>
-                <Input 
-                   type="number" step="0.1" required 
-                   className="bg-white border-teal-200 text-center font-bold text-lg h-12 focus:ring-teal-500"
-                   value={formData.initialHeight || ""} 
-                   onChange={(e) => setFormData({...formData, initialHeight: parseFloat(e.target.value)})} 
-                />
-             </div>
-          </div>
 
-          <div className="h-px bg-slate-100 my-2"></div>
-
-          {/* Section: Orang Tua */}
-          <div className="space-y-3">
              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Data Orang Tua</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tautkan ke Akun Ortu</label>
                 <div className="relative">
                    <select 
-                      className="w-full h-11 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-3 text-sm appearance-none cursor-pointer"
+                      className="w-full h-14 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-teal-500/20 outline-none px-4 text-sm font-bold appearance-none cursor-pointer text-slate-700"
                       value={formData.parentId} 
                       onChange={(e) => setFormData({...formData, parentId: e.target.value})}
                    >
                       <option value="">-- Input Manual (Belum Punya Akun) --</option>
                       {parents.map(p => <option key={p.uid} value={p.uid}>{p.name} ({p.email})</option>)}
                    </select>
-                   <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                   <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
                 </div>
+                <p className="text-[10px] text-slate-400 px-1 mt-1 font-medium">Memilih dari daftar akan mengizinkan orang tua mengakses data anak di HP mereka.</p>
              </div>
              
              {!formData.parentId && (
                 <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nama Ibu / Wali (Manual)</label>
                    <Input 
                       required={!formData.parentId} 
-                      placeholder="Nama Ibu/Ayah (Manual)"
-                      className="bg-slate-50 border-transparent focus:bg-white transition-all h-11"
+                      placeholder="Masukkan nama wali..."
+                      className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-14 rounded-2xl text-sm font-medium"
                       value={formData.parentName} 
                       onChange={(e) => setFormData({...formData, parentName: e.target.value})} 
                    />
@@ -408,11 +509,11 @@ export default function ChildrenPage() {
              )}
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-4 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 border-t border-slate-100">
             <Button 
                type="button" 
-               variant="ghost" 
-               className="text-slate-500"
+               variant="outline" 
+               className="h-12 rounded-xl text-slate-600 border-slate-200 font-bold hover:bg-slate-50 w-full sm:w-auto"
                onClick={() => setIsModalOpen(false)}
             >
                Batal
@@ -420,9 +521,9 @@ export default function ChildrenPage() {
             <Button 
                type="submit" 
                isLoading={isSubmitting}
-               className="bg-teal-600 hover:bg-teal-700 px-6 text-white font-bold shadow-lg shadow-teal-200"
+               className="h-12 bg-teal-600 hover:bg-teal-700 px-8 text-white font-black shadow-lg shadow-teal-200 rounded-xl w-full sm:w-auto"
             >
-               Simpan Data
+               Simpan Data Balita
             </Button>
           </div>
         </form>

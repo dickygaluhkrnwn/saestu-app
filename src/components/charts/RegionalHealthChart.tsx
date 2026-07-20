@@ -4,21 +4,36 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card } from '@/components/ui/Card'; 
 
-const dataWeight = [
+// 1. Mendefinisikan Tipe Data yang Diharapkan
+interface ChartData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+// 2. Mendefinisikan Props untuk Komponen Ini
+interface RegionalHealthChartProps {
+  weightData?: ChartData[];
+  heightData?: ChartData[];
+  totalBalita?: number;
+}
+
+// 3. Fallback dummy jika Props kosong
+const defaultWeightData = [
   { name: 'Normal', value: 450, color: '#10b981' }, 
   { name: 'Risiko', value: 80, color: '#f59e0b' },  
   { name: 'Buruk', value: 25, color: '#f43f5e' },   
   { name: 'Lebih', value: 45, color: '#6366f1' },   
 ];
 
-const dataHeight = [
+const defaultHeightData = [
   { name: 'Normal', value: 480, color: '#10b981' },
   { name: 'Pendek', value: 95, color: '#f59e0b' },
   { name: 'Stunting', value: 25, color: '#f43f5e' }, 
 ];
 
-// Helper untuk menampilkan Custom Legend secara manual agar lebih rapi di HP
-const CustomLegend = ({ data }: { data: any[] }) => (
+// Helper untuk menampilkan Custom Legend secara manual
+const CustomLegend = ({ data }: { data: ChartData[] }) => (
   <div className="grid grid-cols-2 gap-y-2 gap-x-1 mt-4">
     {data.map((item, index) => (
       <div key={index} className="flex items-center gap-2">
@@ -30,7 +45,22 @@ const CustomLegend = ({ data }: { data: any[] }) => (
   </div>
 );
 
-export default function RegionalHealthChart() {
+// 4. Menerapkan Props ke Komponen
+export default function RegionalHealthChart({ 
+  weightData = defaultWeightData, 
+  heightData = defaultHeightData, 
+  totalBalita = 600 
+}: RegionalHealthChartProps) {
+
+  // Pastikan data tidak benar-benar kosong agar PieChart Recharts tidak crash
+  const finalWeightData = weightData && weightData.length > 0 && !weightData.every(d => d.value === 0) 
+        ? weightData 
+        : [{ name: 'Belum Ada Data', value: 1, color: '#e2e8f0' }];
+
+  const finalHeightData = heightData && heightData.length > 0 && !heightData.every(d => d.value === 0) 
+        ? heightData 
+        : [{ name: 'Belum Ada Data', value: 1, color: '#e2e8f0' }];
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
       
@@ -43,7 +73,7 @@ export default function RegionalHealthChart() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={dataWeight}
+                data={finalWeightData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -52,7 +82,7 @@ export default function RegionalHealthChart() {
                 dataKey="value"
                 stroke="none"
               >
-                {dataWeight.map((entry, index) => (
+                {finalWeightData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -64,11 +94,12 @@ export default function RegionalHealthChart() {
           </ResponsiveContainer>
           {/* Angka Total di Tengah Donat */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-5px]">
-             <span className="text-2xl font-black text-slate-800">600</span>
+             <span className="text-2xl font-black text-slate-800">{totalBalita}</span>
              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Balita</span>
           </div>
         </div>
-        <CustomLegend data={dataWeight} />
+        
+        <CustomLegend data={weightData && !weightData.every(d => d.value === 0) ? weightData : defaultWeightData} />
       </Card>
 
       {/* Chart 2: Status Tinggi Badan */}
@@ -80,7 +111,7 @@ export default function RegionalHealthChart() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={dataHeight}
+                data={finalHeightData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -89,7 +120,7 @@ export default function RegionalHealthChart() {
                 dataKey="value"
                 stroke="none"
               >
-                {dataHeight.map((entry, index) => (
+                {finalHeightData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -101,11 +132,12 @@ export default function RegionalHealthChart() {
           </ResponsiveContainer>
            {/* Angka Total di Tengah Donat */}
            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-5px]">
-             <span className="text-2xl font-black text-slate-800">600</span>
+             <span className="text-2xl font-black text-slate-800">{totalBalita}</span>
              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Balita</span>
           </div>
         </div>
-        <CustomLegend data={dataHeight} />
+        
+        <CustomLegend data={heightData && !heightData.every(d => d.value === 0) ? heightData : defaultHeightData} />
       </Card>
       
     </div>
